@@ -159,15 +159,15 @@ curl "http://127.0.0.1:8000/api/search/?q=paracetamol&sort=price"
 
 ## 7. Production Notes
 
-These are called out explicitly because they matter before this goes live —
-they're not yet automated here:
+These are called out explicitly because they matter before this goes live.
+Status of each as of this iteration:
 
-- **Migrations**: `Base.metadata.create_all()` (used at startup) is fine for
+- [ ] **Migrations**: `Base.metadata.create_all()` (used at startup) is fine for
   development only. Introduce **Alembic** for real schema migrations.
-- **Secrets**: set a strong, random `SECRET_KEY` in `.env`; never commit `.env`.
-- **Rate limiting / input size limits** on the search endpoint before public launch.
-- **HTTPS** termination in front of the API in any real deployment.
-- Consider a real search backend (e.g. Postgres full-text search or
+- [ ] **Secrets**: set a strong, random `SECRET_KEY` in `.env`; never commit `.env`.
+- [ ] **Rate limiting / input size limits** on the search endpoint before public launch.
+- [ ] **HTTPS** termination in front of the API in any real deployment.
+- [ ] Consider a real search backend (e.g. Postgres full-text search or
   Elasticsearch/Meilisearch) if the `ilike` matching in `search.py` doesn't
   scale or isn't fuzzy enough — the proposal's "Smart Search" section
   (typo tolerance, relevance ranking) is a natural next iteration here.
