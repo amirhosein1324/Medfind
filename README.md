@@ -162,8 +162,10 @@ curl "http://127.0.0.1:8000/api/search/?q=paracetamol&sort=price"
 These are called out explicitly because they matter before this goes live.
 Status of each as of this iteration:
 
-- [ ] **Migrations**: `Base.metadata.create_all()` (used at startup) is fine for
-  development only. Introduce **Alembic** for real schema migrations.
+- [x] **Migrations**: Alembic is now wired up (`migrations/`), pointed at the
+  app's own `Settings`/`Base` so it can't drift from the models. Run
+  `alembic upgrade head` instead of relying on `create_all()` in production.
+  `create_all()` is left in `main.py` for zero-friction local dev only.
 - [ ] **Secrets**: set a strong, random `SECRET_KEY` in `.env`; never commit `.env`.
 - [ ] **Rate limiting / input size limits** on the search endpoint before public launch.
 - [ ] **HTTPS** termination in front of the API in any real deployment.
