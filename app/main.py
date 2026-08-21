@@ -23,3 +23,9 @@ app.include_router(search.router, prefix="/api/search", tags=["Search"])
 @app.get("/")
 def root():
     return {"message": "Welcome to MedFind API", "docs": "/docs"}
+
+
+@app.get("/health", tags=["Meta"])
+def health_check():
+    """Liveness/readiness probe for load balancers and uptime monitors."""
+    return {"status": "ok"}
