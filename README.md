@@ -1,5 +1,7 @@
 # MedFind Backend
 
+[![Tests](https://github.com/amirhosein1324/Medfind/actions/workflows/tests.yml/badge.svg)](https://github.com/amirhosein1324/Medfind/actions/workflows/tests.yml)
+
 FastAPI + SQLAlchemy backend for the MedFind medicine search and pharmacy
 comparison platform, implementing the 8-table database design from the
 project proposal plus the authentication, authorization, and audit-trail
@@ -41,6 +43,15 @@ uvicorn app.main:app --reload
 
 Open http://127.0.0.1:8000/docs for interactive API docs (Swagger UI), which
 includes an "Authorize" button that works with the login endpoint below.
+
+### 2b. Or run it with Docker
+
+```
+docker compose up --build
+```
+
+This starts the API together with a Postgres database, no local Python
+environment needed. The API is available at the same http://127.0.0.1:8000/docs.
 
 ## 2a. Running Tests
 
@@ -129,7 +140,10 @@ before/after values — this is what the proposal's "Data Accuracy" and
 GET /api/search/?q=paracetamol
 GET /api/search/?q=paracetamol&latitude=50.11&longitude=8.68&sort=distance
 GET /api/search/?q=paracetamol&max_distance_km=5&availability=available&sort=price
+GET /api/search/?q=paracetamol&limit=10&offset=20
 ```
+
+Responses are now paginated: `{"total": <int>, "limit": <int>, "offset": <int>, "results": [...]}`. Default `limit` is 20 (max 100).
 
 - Matches medicine name, generic name, brand name, **and aliases** — so a
   pharmacy calling something "Panadol Extra" still surfaces a "Paracetamol"
@@ -159,15 +173,30 @@ curl "http://127.0.0.1:8000/api/search/?q=paracetamol&sort=price"
 
 ## 7. Production Notes
 
-These are called out explicitly because they matter before this goes live —
-they're not yet automated here:
+These are called out explicitly because they matter before this goes live.
+Status of each as of this iteration:
 
-- **Migrations**: `Base.metadata.create_all()` (used at startup) is fine for
-  development only. Introduce **Alembic** for real schema migrations.
-- **Secrets**: set a strong, random `SECRET_KEY` in `.env`; never commit `.env`.
-- **Rate limiting / input size limits** on the search endpoint before public launch.
-- **HTTPS** termination in front of the API in any real deployment.
-- Consider a real search backend (e.g. Postgres full-text search or
+- [x] **Migrations**: Alembic is now wired up (`migrations/`), pointed at the
+  app's own `Settings`/`Base` so it can't drift from the models. Run
+  `alembic upgrade head` instead of relying on `create_all()` in production.
+  `create_all()` is left in `main.py` for zero-friction local dev only.
+- [ ] **Secrets**: set a strong, random `SECRET_KEY` in `.env`; never commit `.env`.
+- [x] **Rate limiting / input size limits**: `/api/search` is capped at
+  30 requests/minute per client IP (slowapi) and `q` is bounded to 2-100
+  characters.
+- [x] **HTTPS**: the app itself is protocol-agnostic and adds baseline
+  security response headers (`X-Content-Type-Options`, `X-Frame-Options`,
+  `Referrer-Policy`) via middleware. TLS termination still belongs at the
+  reverse proxy / load balancer in front of it (nginx, Caddy, or your
+  cloud provider's LB) — this app does not terminate TLS itself.
+- [ ] Consider a real search backend (e.g. Postgres full-text search or
   Elasticsearch/Meilisearch) if the `ilike` matching in `search.py` doesn't
   scale or isn't fuzzy enough — the proposal's "Smart Search" section
   (typo tolerance, relevance ranking) is a natural next iteration here.
+
+## 8. Continuous Integration
+
+Every push/PR to `main` runs the full test suite via GitHub Actions
+(`.github/workflows/tests.yml`). No Postgres service container is needed
+in CI since the suite already runs against an isolated SQLite DB (see
+`tests/conftest.py`).

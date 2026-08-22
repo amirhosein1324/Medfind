@@ -1,33 +1,30 @@
 from typing import Literal
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from ..database import get_db
 from ..models import Medicine, MedicineAlias, Pharmacy, PharmacyProduct, SearchHistory
-from ..schemas import SearchResult
-from ..utils import haversine_km
+from ..schemas import SearchResponse, SearchResult
+from ..rate_limit import limiter
+from ..utils import haversine_km, relevance_sort_key
 
 router = APIRouter()
 
-# Availability ranks better than unknown/out-of-stock in default sort order.
-_AVAILABILITY_RANK = {
-    "available": 0,
-    "limited_stock": 1,
-    "unknown": 2,
-    "out_of_stock": 3,
-}
 
-
-@router.get("/", response_model=list[SearchResult])
+@router.get("/", response_model=SearchResponse)
+@limiter.limit("30/minute")
 def search_medicine(
-    q: str,
+    request: Request,
+    q: str = Query(..., min_length=2, max_length=100),
     latitude: float | None = None,
     longitude: float | None = None,
     max_distance_km: float | None = None,
     availability: str | None = None,
     sort: Literal["relevance", "distance", "price"] = "relevance",
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
 ):
     """
@@ -110,13 +107,7 @@ def search_medicine(
     elif sort == "price":
         results.sort(key=lambda x: (x.price is None, x.price or 0))
     else:  # relevance: availability first, then price, then freshness
-        results.sort(
-            key=lambda x: (
-                _AVAILABILITY_RANK.get(x.availability, 9),
-                x.price if x.price is not None else float("inf"),
-                -x.last_updated.timestamp(),
-            )
-        )
+        results.sort(key=relevance_sort_key)
 
     # Log the search for analytics/personalization, per the proposal's
     # search_history entity. Anonymous searches are logged with user_id=None.
@@ -131,4 +122,7 @@ def search_medicine(
     )
     db.commit()
 
-    return results
+    total = len(results)
+    page = results[offset : offset + limit]
+
+    return SearchResponse(total=total, limit=limit, offset=offset, results=page)
