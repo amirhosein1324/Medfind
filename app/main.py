@@ -7,10 +7,12 @@ from .routers import auth, medicines, pharmacies, search, users
 # with Alembic migrations (see README).
 Base.metadata.create_all(bind=engine)
 
+API_VERSION = "1.0.0"
+
 app = FastAPI(
     title="MedFind API",
     description="Smart Medicine Search and Pharmacy Comparison Platform",
-    version="1.0.0",
+    version=API_VERSION,
 )
 
 app.include_router(auth.router, prefix="/api/auth", tags=["Auth"])
@@ -29,3 +31,8 @@ def root():
 def health_check():
     """Liveness/readiness probe for load balancers and uptime monitors."""
     return {"status": "ok"}
+
+
+@app.get("/version", tags=["Meta"])
+def version():
+    return {"version": API_VERSION}
