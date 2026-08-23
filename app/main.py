@@ -1,7 +1,10 @@
 from fastapi import FastAPI
 
 from .database import Base, engine
+from .logging_config import configure_logging
 from .routers import auth, medicines, pharmacies, search, users
+
+configure_logging()
 
 # NOTE: create_all() is fine for development. For production, replace this
 # with Alembic migrations (see README).
