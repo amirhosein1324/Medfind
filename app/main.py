@@ -2,6 +2,7 @@ from fastapi import FastAPI
 
 from .database import Base, engine
 from .logging_config import configure_logging
+from .middleware import RequestLoggingMiddleware, SecurityHeadersMiddleware
 from .routers import auth, medicines, pharmacies, search, users
 
 configure_logging()
@@ -17,6 +18,9 @@ app = FastAPI(
     description="Smart Medicine Search and Pharmacy Comparison Platform",
     version=API_VERSION,
 )
+
+app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(RequestLoggingMiddleware)
 
 app.include_router(auth.router, prefix="/api/auth", tags=["Auth"])
 app.include_router(users.router, prefix="/api/users", tags=["Users"])
