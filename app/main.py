@@ -1,5 +1,7 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
+from .config import get_cors_origins
 from .database import Base, engine
 from .logging_config import configure_logging
 from .middleware import RequestLoggingMiddleware, SecurityHeadersMiddleware
@@ -19,6 +21,13 @@ app = FastAPI(
     version=API_VERSION,
 )
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=get_cors_origins(),
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(RequestLoggingMiddleware)
 
