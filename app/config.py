@@ -14,6 +14,16 @@ class Settings(BaseSettings):
     secret_key: str = "change-this-to-a-long-random-string"
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 60
+    # Comma-separated list of allowed browser origins, e.g.
+    # "https://medfind.app,https://admin.medfind.app". "*" for local dev only.
+    cors_allowed_origins: str = "*"
 
 
 settings = Settings()
+
+
+def get_cors_origins() -> list[str]:
+    raw = settings.cors_allowed_origins.strip()
+    if raw == "*":
+        return ["*"]
+    return [origin.strip() for origin in raw.split(",") if origin.strip()]
