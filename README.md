@@ -168,7 +168,11 @@ Status of each as of this iteration:
   `create_all()` is left in `main.py` for zero-friction local dev only.
 - [ ] **Secrets**: set a strong, random `SECRET_KEY` in `.env`; never commit `.env`.
 - [ ] **Rate limiting / input size limits** on the search endpoint before public launch.
-- [ ] **HTTPS** termination in front of the API in any real deployment.
+- [x] **HTTPS**: the app itself is protocol-agnostic and adds baseline
+  security response headers (`X-Content-Type-Options`, `X-Frame-Options`,
+  `Referrer-Policy`) via middleware. TLS termination still belongs at the
+  reverse proxy / load balancer in front of it (nginx, Caddy, or your
+  cloud provider's LB) — this app does not terminate TLS itself.
 - [ ] Consider a real search backend (e.g. Postgres full-text search or
   Elasticsearch/Meilisearch) if the `ilike` matching in `search.py` doesn't
   scale or isn't fuzzy enough — the proposal's "Smart Search" section
