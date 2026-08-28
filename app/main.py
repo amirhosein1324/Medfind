@@ -1,10 +1,13 @@
 from fastapi import FastAPI
+from slowapi.errors import RateLimitExceeded
+from slowapi import _rate_limit_exceeded_handler
 from fastapi.middleware.cors import CORSMiddleware
 
 from .config import get_cors_origins
 from .database import Base, engine
 from .logging_config import configure_logging
 from .middleware import RequestLoggingMiddleware, SecurityHeadersMiddleware
+from .rate_limit import limiter
 from .routers import auth, medicines, pharmacies, search, users
 
 configure_logging()
@@ -20,6 +23,9 @@ app = FastAPI(
     description="Smart Medicine Search and Pharmacy Comparison Platform",
     version=API_VERSION,
 )
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 app.add_middleware(
     CORSMiddleware,
