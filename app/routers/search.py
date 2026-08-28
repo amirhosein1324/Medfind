@@ -1,12 +1,13 @@
 from typing import Literal
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from ..database import get_db
 from ..models import Medicine, MedicineAlias, Pharmacy, PharmacyProduct, SearchHistory
 from ..schemas import SearchResult
+from ..rate_limit import limiter
 from ..utils import haversine_km
 
 router = APIRouter()
@@ -21,8 +22,10 @@ _AVAILABILITY_RANK = {
 
 
 @router.get("/", response_model=list[SearchResult])
+@limiter.limit("30/minute")
 def search_medicine(
-    q: str,
+    request: Request,
+    q: str = Query(..., min_length=2, max_length=100),
     latitude: float | None = None,
     longitude: float | None = None,
     max_distance_km: float | None = None,
