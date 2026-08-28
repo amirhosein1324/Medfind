@@ -221,3 +221,13 @@ def test_search_is_logged_to_search_history(client):
     ).all()
     db.close()
     assert len(entries) == 1
+
+
+def test_search_rejects_too_short_query(client):
+    response = client.get("/api/search/?q=a")
+    assert response.status_code == 422
+
+
+def test_search_rejects_too_long_query(client):
+    response = client.get("/api/search/?q=" + "a" * 101)
+    assert response.status_code == 422
