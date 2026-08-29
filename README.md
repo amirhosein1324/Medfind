@@ -167,7 +167,9 @@ Status of each as of this iteration:
   `alembic upgrade head` instead of relying on `create_all()` in production.
   `create_all()` is left in `main.py` for zero-friction local dev only.
 - [ ] **Secrets**: set a strong, random `SECRET_KEY` in `.env`; never commit `.env`.
-- [ ] **Rate limiting / input size limits** on the search endpoint before public launch.
+- [x] **Rate limiting / input size limits**: `/api/search` is capped at
+  30 requests/minute per client IP (slowapi) and `q` is bounded to 2-100
+  characters.
 - [x] **HTTPS**: the app itself is protocol-agnostic and adds baseline
   security response headers (`X-Content-Type-Options`, `X-Frame-Options`,
   `Referrer-Policy`) via middleware. TLS termination still belongs at the
