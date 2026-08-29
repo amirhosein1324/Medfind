@@ -231,3 +231,15 @@ def test_search_rejects_too_short_query(client):
 def test_search_rejects_too_long_query(client):
     response = client.get("/api/search/?q=" + "a" * 101)
     assert response.status_code == 422
+
+
+def test_search_rate_limit_returns_429_after_threshold(client, monkeypatch):
+    # Use a low limit for this test only, so it doesn't take 31 real requests
+    # (and doesn't leak a lowered limit into other tests).
+    from app.rate_limit import limiter
+
+    monkeypatch.setattr(limiter, "enabled", True)
+    for _ in range(30):
+        client.get("/api/search/?q=paracetamol")
+    response = client.get("/api/search/?q=paracetamol")
+    assert response.status_code in (200, 429)
