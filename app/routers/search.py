@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from ..database import get_db
 from ..models import Medicine, MedicineAlias, Pharmacy, PharmacyProduct, SearchHistory
-from ..schemas import SearchResult
+from ..schemas import SearchResponse, SearchResult
 from ..rate_limit import limiter
 from ..utils import haversine_km
 
@@ -21,7 +21,7 @@ _AVAILABILITY_RANK = {
 }
 
 
-@router.get("/", response_model=list[SearchResult])
+@router.get("/", response_model=SearchResponse)
 @limiter.limit("30/minute")
 def search_medicine(
     request: Request,
@@ -31,6 +31,8 @@ def search_medicine(
     max_distance_km: float | None = None,
     availability: str | None = None,
     sort: Literal["relevance", "distance", "price"] = "relevance",
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
 ):
     """
@@ -134,4 +136,7 @@ def search_medicine(
     )
     db.commit()
 
-    return results
+    total = len(results)
+    page = results[offset : offset + limit]
+
+    return SearchResponse(total=total, limit=limit, offset=offset, results=page)
