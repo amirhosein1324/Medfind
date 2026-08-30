@@ -160,3 +160,10 @@ class SearchResult(BaseModel):
     latitude: float | None
     longitude: float | None
     distance_km: float | None = None
+
+
+class SearchResponse(BaseModel):
+    total: int
+    limit: int
+    offset: int
+    results: list[SearchResult]
