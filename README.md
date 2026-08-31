@@ -129,7 +129,10 @@ before/after values — this is what the proposal's "Data Accuracy" and
 GET /api/search/?q=paracetamol
 GET /api/search/?q=paracetamol&latitude=50.11&longitude=8.68&sort=distance
 GET /api/search/?q=paracetamol&max_distance_km=5&availability=available&sort=price
+GET /api/search/?q=paracetamol&limit=10&offset=20
 ```
+
+Responses are now paginated: `{"total": <int>, "limit": <int>, "offset": <int>, "results": [...]}`. Default `limit` is 20 (max 100).
 
 - Matches medicine name, generic name, brand name, **and aliases** — so a
   pharmacy calling something "Panadol Extra" still surfaces a "Paracetamol"
