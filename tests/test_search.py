@@ -243,3 +243,13 @@ def test_search_rate_limit_returns_429_after_threshold(client, monkeypatch):
         client.get("/api/search/?q=paracetamol")
     response = client.get("/api/search/?q=paracetamol")
     assert response.status_code in (200, 429)
+
+
+def test_search_pagination_shape(client):
+    response = client.get("/api/search/?q=paracetamol&limit=1&offset=0")
+    assert response.status_code == 200
+    body = response.json()
+    assert set(body.keys()) == {"total", "limit", "offset", "results"}
+    assert body["limit"] == 1
+    assert body["offset"] == 0
+    assert len(body["results"]) <= 1
