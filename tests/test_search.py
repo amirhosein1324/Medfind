@@ -35,7 +35,7 @@ def test_search_requires_query_param(client):
 def test_search_returns_empty_for_no_matches(client):
     r = client.get("/api/search/", params={"q": "nonexistent-drug-xyz"})
     assert r.status_code == 200
-    assert r.json() == []
+    assert r.json()["results"] == []
 
 
 def test_search_matches_by_generic_and_brand_name(client):
@@ -50,7 +50,7 @@ def test_search_matches_by_generic_and_brand_name(client):
     for q in ["paracetamol", "panadol", "500mg"]:
         r = client.get("/api/search/", params={"q": q})
         assert r.status_code == 200, q
-        assert len(r.json()) == 1, f"query '{q}' should match"
+        assert len(r.json()["results"]) == 1, f"query '{q}' should match"
 
 
 def test_search_matches_by_alias(client):
@@ -68,8 +68,9 @@ def test_search_matches_by_alias(client):
 
     r = client.get("/api/search/", params={"q": "Panadol Extra"})
     assert r.status_code == 200
-    assert len(r.json()) == 1
-    assert r.json()[0]["medicine"] == "Paracetamol 500mg"
+    body = r.json()
+    assert len(body["results"]) == 1
+    assert body["results"][0]["medicine"] == "Paracetamol 500mg"
 
 
 def test_search_excludes_unapproved_pharmacies(client):
@@ -87,7 +88,7 @@ def test_search_excludes_unapproved_pharmacies(client):
 
     r = client.get("/api/search/", params={"q": "Aspirin"})
     assert r.status_code == 200
-    assert r.json() == []
+    assert r.json()["results"] == []
 
 
 def test_search_excludes_inactive_listings(client):
@@ -110,7 +111,7 @@ def test_search_excludes_inactive_listings(client):
 
     r = client.get("/api/search/", params={"q": "Ibuprofen"})
     assert r.status_code == 200
-    assert r.json() == []
+    assert r.json()["results"] == []
 
 
 def test_search_filter_by_availability(client):
@@ -126,7 +127,7 @@ def test_search_filter_by_availability(client):
 
     r = client.get("/api/search/", params={"q": "Vitamin", "availability": "available"})
     assert r.status_code == 200
-    results = r.json()
+    results = r.json()["results"]
     assert len(results) == 1
     assert results[0]["availability"] == "available"
 
@@ -144,7 +145,7 @@ def test_search_sort_by_price_cheapest_first(client):
 
     r = client.get("/api/search/", params={"q": "Cough", "sort": "price"})
     assert r.status_code == 200
-    results = r.json()
+    results = r.json()["results"]
     assert [x["pharmacy"] for x in results] == ["Cheap Pharmacy", "Expensive Pharmacy"]
 
 
@@ -162,7 +163,7 @@ def test_search_relevance_ranks_available_before_out_of_stock(client):
 
     r = client.get("/api/search/", params={"q": "Bandages"})  # default sort=relevance
     assert r.status_code == 200
-    results = r.json()
+    results = r.json()["results"]
     assert results[0]["pharmacy"] == "In Stock Pharmacy"
 
 
@@ -183,7 +184,7 @@ def test_search_sort_by_distance(client):
         "q": "Sunscreen", "latitude": 50.11, "longitude": 8.68, "sort": "distance",
     })
     assert r.status_code == 200
-    results = r.json()
+    results = r.json()["results"]
     assert results[0]["pharmacy"] == "Near Pharmacy"
     assert results[0]["distance_km"] < results[1]["distance_km"]
 
@@ -204,7 +205,7 @@ def test_search_max_distance_filters_out_far_results(client):
         "q": "Eye Drops", "latitude": 50.11, "longitude": 8.68, "max_distance_km": 5,
     })
     assert r.status_code == 200
-    results = r.json()
+    results = r.json()["results"]
     assert len(results) == 1
     assert results[0]["pharmacy"] == "Near Pharmacy"
 
