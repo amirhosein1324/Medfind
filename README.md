@@ -182,3 +182,10 @@ Status of each as of this iteration:
   Elasticsearch/Meilisearch) if the `ilike` matching in `search.py` doesn't
   scale or isn't fuzzy enough — the proposal's "Smart Search" section
   (typo tolerance, relevance ranking) is a natural next iteration here.
+
+## 8. Continuous Integration
+
+Every push/PR to `main` runs the full test suite via GitHub Actions
+(`.github/workflows/tests.yml`). No Postgres service container is needed
+in CI since the suite already runs against an isolated SQLite DB (see
+`tests/conftest.py`).
