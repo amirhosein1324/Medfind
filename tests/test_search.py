@@ -254,3 +254,27 @@ def test_search_pagination_shape(client):
     assert body["limit"] == 1
     assert body["offset"] == 0
     assert len(body["results"]) <= 1
+
+
+def test_search_max_distance_combined_with_pagination(client):
+    admin_headers = _make_admin(client)
+    owner_headers = _make_pharmacy_owner(client)
+    medicine_id = client.post(
+        "/api/medicines/", json={"name": "Allergy Relief"}, headers=admin_headers
+    ).json()["medicine_id"]
+
+    near_id = _approved_pharmacy(client, admin_headers, owner_headers, "Near A", lat=50.111, lon=8.681)
+    near2_id = _approved_pharmacy(client, admin_headers, owner_headers, "Near B", lat=50.112, lon=8.682)
+    far_id = _approved_pharmacy(client, admin_headers, owner_headers, "Far Away", lat=51.5, lon=0.12)
+    for pid in (near_id, near2_id, far_id):
+        _listing(client, owner_headers, pid, medicine_id, price=5.0, availability_status="available")
+
+    r = client.get("/api/search/", params={
+        "q": "Allergy", "latitude": 50.11, "longitude": 8.68,
+        "max_distance_km": 5, "limit": 1, "offset": 0,
+    })
+    assert r.status_code == 200
+    body = r.json()
+    # total reflects the post-distance-filter count, not just this page.
+    assert body["total"] == 2
+    assert len(body["results"]) == 1
