@@ -278,3 +278,24 @@ def test_search_max_distance_combined_with_pagination(client):
     # total reflects the post-distance-filter count, not just this page.
     assert body["total"] == 2
     assert len(body["results"]) == 1
+
+
+def test_search_empty_query_string_is_rejected(client):
+    r = client.get("/api/search/", params={"q": ""})
+    assert r.status_code == 422
+
+
+def test_search_offset_beyond_results_returns_empty_page(client):
+    admin_headers = _make_admin(client)
+    owner_headers = _make_pharmacy_owner(client)
+    medicine_id = client.post(
+        "/api/medicines/", json={"name": "Multivitamin"}, headers=admin_headers
+    ).json()["medicine_id"]
+    pharmacy_id = _approved_pharmacy(client, admin_headers, owner_headers, "Only Pharmacy")
+    _listing(client, owner_headers, pharmacy_id, medicine_id, price=4.5, availability_status="available")
+
+    r = client.get("/api/search/", params={"q": "Multivitamin", "offset": 50})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["total"] == 1
+    assert body["results"] == []
