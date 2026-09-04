@@ -8,17 +8,9 @@ from ..database import get_db
 from ..models import Medicine, MedicineAlias, Pharmacy, PharmacyProduct, SearchHistory
 from ..schemas import SearchResponse, SearchResult
 from ..rate_limit import limiter
-from ..utils import haversine_km
+from ..utils import haversine_km, relevance_sort_key
 
 router = APIRouter()
-
-# Availability ranks better than unknown/out-of-stock in default sort order.
-_AVAILABILITY_RANK = {
-    "available": 0,
-    "limited_stock": 1,
-    "unknown": 2,
-    "out_of_stock": 3,
-}
 
 
 @router.get("/", response_model=SearchResponse)
@@ -115,13 +107,7 @@ def search_medicine(
     elif sort == "price":
         results.sort(key=lambda x: (x.price is None, x.price or 0))
     else:  # relevance: availability first, then price, then freshness
-        results.sort(
-            key=lambda x: (
-                _AVAILABILITY_RANK.get(x.availability, 9),
-                x.price if x.price is not None else float("inf"),
-                -x.last_updated.timestamp(),
-            )
-        )
+        results.sort(key=relevance_sort_key)
 
     # Log the search for analytics/personalization, per the proposal's
     # search_history entity. Anonymous searches are logged with user_id=None.
