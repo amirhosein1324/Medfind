@@ -14,9 +14,9 @@ def test_haversine_km_zero_for_identical_points():
 
 
 def test_haversine_km_known_distance_frankfurt_to_london():
-    # Frankfurt (~50.11, 8.68) to London (~51.5, -0.12) is roughly 500-600km.
+    # Frankfurt (~50.11, 8.68) to London (~51.5, -0.12) is roughly 600-650km.
     km = haversine_km(50.11, 8.68, 51.5, -0.12)
-    assert 480 <= km <= 620
+    assert 600 <= km <= 650
 
 
 def _fake_result(availability, price, minutes_ago):
