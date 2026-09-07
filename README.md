@@ -42,6 +42,15 @@ uvicorn app.main:app --reload
 Open http://127.0.0.1:8000/docs for interactive API docs (Swagger UI), which
 includes an "Authorize" button that works with the login endpoint below.
 
+### 2b. Or run it with Docker
+
+```
+docker compose up --build
+```
+
+This starts the API together with a Postgres database, no local Python
+environment needed. The API is available at the same http://127.0.0.1:8000/docs.
+
 ## 2a. Running Tests
 
 ```bash
