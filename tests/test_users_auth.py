@@ -116,3 +116,8 @@ def test_deactivated_user_token_rejected(client):
 
     r = client.get("/api/users/me", headers=auth_headers(token))
     assert r.status_code == 401
+
+
+def test_missing_authorization_header_returns_401_not_500(client):
+    r = client.get("/api/users/", headers={})
+    assert r.status_code in (401, 403)
