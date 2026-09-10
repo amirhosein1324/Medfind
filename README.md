@@ -1,5 +1,7 @@
 # MedFind Backend
 
+[![Tests](https://github.com/amirhosein1324/Medfind/actions/workflows/tests.yml/badge.svg)](https://github.com/amirhosein1324/Medfind/actions/workflows/tests.yml)
+
 FastAPI + SQLAlchemy backend for the MedFind medicine search and pharmacy
 comparison platform, implementing the 8-table database design from the
 project proposal plus the authentication, authorization, and audit-trail
