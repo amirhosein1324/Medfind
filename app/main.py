@@ -16,7 +16,7 @@ configure_logging()
 # with Alembic migrations (see README).
 Base.metadata.create_all(bind=engine)
 
-API_VERSION = "1.0.0"
+API_VERSION = "1.1.0"
 
 app = FastAPI(
     title="MedFind API",
