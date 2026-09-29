@@ -1,16 +1,11 @@
 from typing import Literal
 
-<<<<<<< HEAD
 from fastapi import APIRouter, Depends
-=======
-from fastapi import APIRouter, Depends, Query, Request
->>>>>>> d9330aae4fcad9dcf5b77c3caff219517d5546fa
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from ..database import get_db
 from ..models import Medicine, MedicineAlias, Pharmacy, PharmacyProduct, SearchHistory
-<<<<<<< HEAD
 from ..schemas import SearchResult
 from ..utils import haversine_km
 
@@ -28,30 +23,11 @@ _AVAILABILITY_RANK = {
 @router.get("/", response_model=list[SearchResult])
 def search_medicine(
     q: str,
-=======
-from ..schemas import SearchResponse, SearchResult
-from ..rate_limit import limiter
-from ..utils import haversine_km, relevance_sort_key
-
-router = APIRouter()
-
-
-@router.get("/", response_model=SearchResponse)
-@limiter.limit("30/minute")
-def search_medicine(
-    request: Request,
-    q: str = Query(..., min_length=2, max_length=100),
->>>>>>> d9330aae4fcad9dcf5b77c3caff219517d5546fa
     latitude: float | None = None,
     longitude: float | None = None,
     max_distance_km: float | None = None,
     availability: str | None = None,
     sort: Literal["relevance", "distance", "price"] = "relevance",
-<<<<<<< HEAD
-=======
-    limit: int = Query(20, ge=1, le=100),
-    offset: int = Query(0, ge=0),
->>>>>>> d9330aae4fcad9dcf5b77c3caff219517d5546fa
     db: Session = Depends(get_db),
 ):
     """
@@ -134,7 +110,6 @@ def search_medicine(
     elif sort == "price":
         results.sort(key=lambda x: (x.price is None, x.price or 0))
     else:  # relevance: availability first, then price, then freshness
-<<<<<<< HEAD
         results.sort(
             key=lambda x: (
                 _AVAILABILITY_RANK.get(x.availability, 9),
@@ -142,9 +117,6 @@ def search_medicine(
                 -x.last_updated.timestamp(),
             )
         )
-=======
-        results.sort(key=relevance_sort_key)
->>>>>>> d9330aae4fcad9dcf5b77c3caff219517d5546fa
 
     # Log the search for analytics/personalization, per the proposal's
     # search_history entity. Anonymous searches are logged with user_id=None.
@@ -159,11 +131,4 @@ def search_medicine(
     )
     db.commit()
 
-<<<<<<< HEAD
     return results
-=======
-    total = len(results)
-    page = results[offset : offset + limit]
-
-    return SearchResponse(total=total, limit=limit, offset=offset, results=page)
->>>>>>> d9330aae4fcad9dcf5b77c3caff219517d5546fa

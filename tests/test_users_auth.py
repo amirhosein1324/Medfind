@@ -93,34 +93,3 @@ def test_list_users_requires_admin(client):
     token = login(client, email="regular@example.com")
     r = client.get("/api/users/", headers=auth_headers(token))
     assert r.status_code == 403
-<<<<<<< HEAD
-=======
-
-
-def test_malformed_token_rejected(client):
-    r = client.get(
-        "/api/users/me", headers={"Authorization": "Bearer not-a-real-jwt"}
-    )
-    assert r.status_code == 401
-
-
-def test_deactivated_user_token_rejected(client):
-    register_user(client, email="ghost@example.com", password="supersecret1")
-    token = login(client, email="ghost@example.com")
-
-    from .conftest import TestingSessionLocal
-    from app.models import User
-    db = TestingSessionLocal()
-    user = db.query(User).filter(User.email == "ghost@example.com").first()
-    user.is_active = False
-    db.commit()
-    db.close()
-
-    r = client.get("/api/users/me", headers=auth_headers(token))
-    assert r.status_code == 401
-
-
-def test_missing_authorization_header_returns_401_not_500(client):
-    r = client.get("/api/users/", headers={})
-    assert r.status_code in (401, 403)
->>>>>>> d9330aae4fcad9dcf5b77c3caff219517d5546fa

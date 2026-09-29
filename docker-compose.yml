@@ -1,16 +1,11 @@
 services:
   db:
-<<<<<<< HEAD
     image: postgres:16
     restart: unless-stopped
-=======
-    image: postgres:16-alpine
->>>>>>> d9330aae4fcad9dcf5b77c3caff219517d5546fa
     environment:
       POSTGRES_USER: medfind
       POSTGRES_PASSWORD: medfind
       POSTGRES_DB: medfind
-<<<<<<< HEAD
     volumes:
       - medfind_pgdata:/var/lib/postgresql/data
     ports:
@@ -50,23 +45,5 @@ services:
       --concurrency ${STRESS_CONCURRENCY:-10}
       --read-ratio ${STRESS_READ_RATIO:-0.8}
 
-=======
-    ports:
-      - "5432:5432"
-    volumes:
-      - medfind_pgdata:/var/lib/postgresql/data
-
-  api:
-    build: .
-    depends_on:
-      - db
-    environment:
-      DATABASE_URL: postgresql+psycopg2://medfind:medfind@db:5432/medfind
-      SECRET_KEY: local-dev-only-secret
-      DEBUG: "true"
-    ports:
-      - "8000:8000"
-
->>>>>>> d9330aae4fcad9dcf5b77c3caff219517d5546fa
 volumes:
   medfind_pgdata:
