@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 venv/
 .venv/
 __pycache__/
@@ -9,3 +10,16 @@ __pycache__/
 *.db
 README.md
 tests/
+=======
+.git
+.github
+__pycache__
+*.pyc
+.venv
+venv
+tests
+*.db
+.env
+.pytest_cache
+.ruff_cache
+>>>>>>> d9330aae4fcad9dcf5b77c3caff219517d5546fa

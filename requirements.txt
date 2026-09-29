@@ -1,6 +1,10 @@
 fastapi
 uvicorn[standard]
 sqlalchemy>=2.0
+<<<<<<< HEAD
+=======
+alembic
+>>>>>>> d9330aae4fcad9dcf5b77c3caff219517d5546fa
 psycopg2-binary
 pydantic
 email-validator
@@ -10,3 +14,11 @@ passlib[bcrypt]
 bcrypt==4.0.1
 python-jose[cryptography]
 python-multipart
+<<<<<<< HEAD
+=======
+slowapi
+
+# --- Testing ---
+pytest
+httpx
+>>>>>>> d9330aae4fcad9dcf5b77c3caff219517d5546fa

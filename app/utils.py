@@ -22,3 +22,27 @@ def haversine_km(
     a = sin(dlat / 2) ** 2 + cos(lat1_r) * cos(lat2_r) * sin(dlon / 2) ** 2
     c = 2 * atan2(sqrt(a), sqrt(1 - a))
     return round(EARTH_RADIUS_KM * c, 2)
+<<<<<<< HEAD
+=======
+
+
+# Availability ranks better than unknown/out-of-stock in default sort order.
+AVAILABILITY_RANK = {
+    "available": 0,
+    "limited_stock": 1,
+    "unknown": 2,
+    "out_of_stock": 3,
+}
+
+
+def relevance_sort_key(result):
+    """Sort key for default relevance ordering: availability, then price,
+    then most-recently-updated first. Pulled out of the search router so it
+    can be unit tested without spinning up the whole app/DB.
+    """
+    return (
+        AVAILABILITY_RANK.get(result.availability, 9),
+        result.price if result.price is not None else float("inf"),
+        -result.last_updated.timestamp(),
+    )
+>>>>>>> d9330aae4fcad9dcf5b77c3caff219517d5546fa

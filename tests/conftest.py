@@ -42,6 +42,19 @@ app.dependency_overrides[get_db] = override_get_db
 
 
 @pytest.fixture(autouse=True)
+<<<<<<< HEAD
+=======
+def _reset_rate_limits():
+    """Each test gets a clean rate-limit bucket, so one test's requests
+    can't push a later, unrelated test over the 30/minute search limit."""
+    from app.rate_limit import limiter
+    limiter.reset()
+    yield
+    limiter.reset()
+
+
+@pytest.fixture(autouse=True)
+>>>>>>> d9330aae4fcad9dcf5b77c3caff219517d5546fa
 def _fresh_database():
     """Recreate all tables before every test so tests don't leak state."""
     Base.metadata.drop_all(bind=engine)
