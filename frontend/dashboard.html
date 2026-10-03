@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MedFind — Pharmacy Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- ============ CONFIG BAR (dev convenience: point at any backend) ============ -->
+<div class="config-bar" id="configBar">
+  <label for="apiBaseInput">API base URL</label>
+  <input type="text" id="apiBaseInput" value="http://127.0.0.1:8000" autocomplete="off">
+  <button type="button" id="apiBaseSave">Save</button>
+</div>
+
+<!-- ============ LOGIN VIEW ============ -->
+<main class="login-screen" id="loginScreen">
+  <form class="login-card" id="loginForm">
+    <h1 class="login-title">MedFind</h1>
+    <p class="login-subtitle">Pharmacy dashboard</p>
+
+    <label class="field-label" for="loginEmail">Email</label>
+    <input class="field-input" type="email" id="loginEmail" required autocomplete="username">
+
+    <label class="field-label" for="loginPassword">Password</label>
+    <input class="field-input" type="password" id="loginPassword" required autocomplete="current-password">
+
+    <button class="btn btn-primary btn-block" type="submit">Log in</button>
+    <p class="form-error" id="loginError" role="alert" aria-live="assertive"></p>
+
+    <p class="login-hint">No account? <button type="button" class="link-btn" id="showRegister">Register as a pharmacy owner</button></p>
+  </form>
+
+  <form class="login-card" id="registerForm" hidden>
+    <h1 class="login-title">Create account</h1>
+    <p class="login-subtitle">Register as a pharmacy owner</p>
+
+    <label class="field-label" for="regName">Full name</label>
+    <input class="field-input" type="text" id="regName" required>
+
+    <label class="field-label" for="regEmail">Email</label>
+    <input class="field-input" type="email" id="regEmail" required autocomplete="username">
+
+    <label class="field-label" for="regPassword">Password</label>
+    <input class="field-input" type="password" id="regPassword" required minlength="8" autocomplete="new-password">
+
+    <button class="btn btn-primary btn-block" type="submit">Create account</button>
+    <p class="form-error" id="registerError" role="alert" aria-live="assertive"></p>
+    <p class="form-success" id="registerSuccess" role="status" aria-live="polite"></p>
+
+    <p class="login-hint"><button type="button" class="link-btn" id="showLogin">Back to log in</button></p>
+  </form>
+</main>
+
+<!-- ============ DASHBOARD VIEW ============ -->
+<div class="app" id="appScreen" hidden>
+
+  <header class="topbar">
+    <div class="brand">MedFind <span class="brand-sub">Pharmacy Dashboard</span></div>
+    <div class="topbar-right">
+      <span class="user-name" id="userName"></span>
+      <button class="btn btn-ghost" id="logoutBtn" type="button">Log out</button>
+    </div>
+  </header>
+
+  <!-- Mobile pharmacy switcher (shown under 768px instead of the rail) -->
+  <div class="mobile-switcher" id="mobileSwitcher">
+    <label class="field-label" for="mobilePharmacySelect">Pharmacy</label>
+    <select class="field-input" id="mobilePharmacySelect"></select>
+  </div>
+
+  <div class="layout">
+    <!-- Left rail: pharmacy list (desktop/tablet) -->
+    <nav class="rail" aria-label="Your pharmacies">
+      <h2 class="rail-heading">Pharmacies</h2>
+      <ul class="rail-list" id="pharmacyList"></ul>
+      <button class="btn btn-secondary btn-block" id="newPharmacyBtn" type="button">+ New pharmacy</button>
+    </nav>
+
+    <!-- Main content -->
+    <main class="main">
+      <div id="noPharmacyState" class="empty-state" hidden>
+        <p>You don't have any pharmacies yet.</p>
+        <button class="btn btn-primary" id="emptyNewPharmacyBtn" type="button">Create your first pharmacy</button>
+      </div>
+
+      <div id="pharmacyPanel" hidden>
+        <div class="panel-header">
+          <div>
+            <h1 class="pharmacy-name" id="activePharmacyName"></h1>
+            <p class="pharmacy-meta" id="activePharmacyMeta"></p>
+          </div>
+          <span class="status-flag" id="approvalFlag"></span>
+        </div>
+
+        <div class="toolbar">
+          <input class="field-input search-input" type="search" id="listingSearch" placeholder="Search listings…" aria-label="Search listings">
+          <button class="btn btn-primary" id="addListingBtn" type="button">+ Add item</button>
+        </div>
+
+        <div class="table-wrap">
+          <table class="ledger" id="listingsTable">
+            <thead>
+              <tr>
+                <th scope="col">Medicine</th>
+                <th scope="col" class="num-col">Price</th>
+                <th scope="col" class="num-col">Stock</th>
+                <th scope="col">Status</th>
+              </tr>
+            </thead>
+            <tbody id="listingsBody"></tbody>
+          </table>
+          <p class="empty-row" id="listingsEmpty" hidden>No listings yet — add your first medicine above.</p>
+        </div>
+
+        <section class="history-section" aria-label="Recent changes">
+          <h2 class="section-heading">Recent changes</h2>
+          <ul class="history-list" id="historyList"></ul>
+          <p class="empty-row" id="historyEmpty" hidden>No changes recorded yet.</p>
+        </section>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- ============ MODALS ============ -->
+<div class="modal-backdrop" id="modalBackdrop" hidden>
+
+  <form class="modal" id="newPharmacyModal" hidden>
+    <h2 class="modal-title">New pharmacy</h2>
+    <label class="field-label" for="npName">Name</label>
+    <input class="field-input" type="text" id="npName" required>
+    <label class="field-label" for="npAddress">Address</label>
+    <input class="field-input" type="text" id="npAddress" required>
+    <div class="field-row">
+      <div>
+        <label class="field-label" for="npLat">Latitude (optional)</label>
+        <input class="field-input" type="number" step="any" id="npLat">
+      </div>
+      <div>
+        <label class="field-label" for="npLng">Longitude (optional)</label>
+        <input class="field-input" type="number" step="any" id="npLng">
+      </div>
+    </div>
+    <p class="form-note">New pharmacies start pending admin approval and won't appear in public search until approved.</p>
+    <p class="form-error" id="newPharmacyError" role="alert" aria-live="assertive"></p>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-ghost" data-close-modal>Cancel</button>
+      <button type="submit" class="btn btn-primary">Create pharmacy</button>
+    </div>
+  </form>
+
+  <form class="modal" id="addListingModal" hidden>
+    <h2 class="modal-title">Add listing</h2>
+    <label class="field-label" for="alMedicineId">Medicine ID</label>
+    <input class="field-input" type="number" id="alMedicineId" required>
+    <p class="form-note">Look up the medicine's ID via <code>GET /api/medicines/?q=</code> — a medicine picker is a natural next iteration.</p>
+    <label class="field-label" for="alPrice">Price</label>
+    <input class="field-input" type="number" step="0.01" min="0" id="alPrice">
+    <label class="field-label" for="alStock">Stock quantity</label>
+    <input class="field-input" type="number" min="0" id="alStock">
+    <label class="field-label" for="alStatus">Availability</label>
+    <select class="field-input" id="alStatus">
+      <option value="available">Available</option>
+      <option value="limited_stock">Limited stock</option>
+      <option value="out_of_stock">Out of stock</option>
+      <option value="unknown" selected>Unknown</option>
+    </select>
+    <p class="form-error" id="addListingError" role="alert" aria-live="assertive"></p>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-ghost" data-close-modal>Cancel</button>
+      <button type="submit" class="btn btn-primary">Add listing</button>
+    </div>
+  </form>
+
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="js/api.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
