@@ -1,9 +1,13 @@
+from datetime import datetime
+
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from ..database import get_db
 from ..models import Medicine, Pharmacy, PharmacyProduct, PharmacyUpdate, User
 from ..schemas import (
+    AdminPharmacyResponse,
     PharmacyCreate,
     PharmacyProductCreate,
     PharmacyProductResponse,
@@ -62,6 +66,52 @@ def list_my_pharmacies(
         .filter(Pharmacy.owner_user_id == current_user.user_id)
         .all()
     )
+
+
+@router.get("/admin/all", response_model=list[AdminPharmacyResponse])
+def admin_list_pharmacies(
+    status: str | None = None,
+    db: Session = Depends(get_db),
+    _admin: User = Depends(require_role("admin")),
+):
+    """Every pharmacy with its owner and listing count. `status` may be
+    'pending' or 'approved'. Powers the admin approval queue."""
+    q = (
+        db.query(Pharmacy, User, func.count(PharmacyProduct.product_id))
+        .join(User, Pharmacy.owner_user_id == User.user_id)
+        .outerjoin(PharmacyProduct, PharmacyProduct.pharmacy_id == Pharmacy.pharmacy_id)
+        .group_by(Pharmacy.pharmacy_id, User.user_id)
+        .order_by(Pharmacy.created_at.desc())
+    )
+    if status == "pending":
+        q = q.filter(Pharmacy.is_approved == False)  # noqa: E712
+    elif status == "approved":
+        q = q.filter(Pharmacy.is_approved == True)  # noqa: E712
+
+    out = []
+    for pharmacy, owner, count in q.all():
+        item = AdminPharmacyResponse.model_validate(pharmacy)
+        item.owner_name = owner.full_name
+        item.owner_email = owner.email
+        item.product_count = count
+        out.append(item)
+    return out
+
+
+@router.patch("/{pharmacy_id}/revoke", response_model=PharmacyResponse)
+def revoke_pharmacy(
+    pharmacy_id: int,
+    db: Session = Depends(get_db),
+    _admin: User = Depends(require_role("admin")),
+):
+    """Take an approved pharmacy back out of public search."""
+    pharmacy = db.query(Pharmacy).filter(Pharmacy.pharmacy_id == pharmacy_id).first()
+    if not pharmacy:
+        raise HTTPException(status_code=404, detail="Pharmacy not found")
+    pharmacy.is_approved = False
+    db.commit()
+    db.refresh(pharmacy)
+    return pharmacy
 
 
 @router.patch("/{pharmacy_id}/approve", response_model=PharmacyResponse)
@@ -158,6 +208,62 @@ def update_product(
     db.commit()
     db.refresh(product)
     return product
+
+
+@router.post("/products/{product_id}/confirm", response_model=PharmacyProductResponse)
+def confirm_product(
+    product_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Say "this listing is still accurate" without changing any value.
+    Refreshes last_updated (so the public freshness indicator resets) and
+    records the confirmation in the audit trail."""
+    product = (
+        db.query(PharmacyProduct)
+        .filter(PharmacyProduct.product_id == product_id)
+        .first()
+    )
+    if not product:
+        raise HTTPException(status_code=404, detail="Product listing not found")
+    _get_owned_pharmacy(product.pharmacy_id, current_user, db)
+
+    db.add(PharmacyUpdate(
+        product_id=product.product_id,
+        updated_by=current_user.user_id,
+        old_price=product.price,
+        new_price=product.price,
+        old_status=product.availability_status,
+        new_status=product.availability_status,
+        old_stock=product.stock_quantity,
+        new_stock=product.stock_quantity,
+    ))
+    product.last_updated = datetime.utcnow()
+    db.commit()
+    db.refresh(product)
+    return product
+
+
+@router.post("/{pharmacy_id}/confirm-all")
+def confirm_all_products(
+    pharmacy_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Bulk version of confirm: marks every active listing of this pharmacy
+    as just-verified. Does not write one audit row per listing."""
+    _get_owned_pharmacy(pharmacy_id, current_user, db)
+    now = datetime.utcnow()
+    count = (
+        db.query(PharmacyProduct)
+        .filter(
+            PharmacyProduct.pharmacy_id == pharmacy_id,
+            PharmacyProduct.is_active == True,  # noqa: E712
+        )
+        .update({PharmacyProduct.last_updated: now}, synchronize_session=False)
+    )
+    db.commit()
+    return {"confirmed": count, "confirmed_at": now.isoformat()}
 
 
 @router.get(

@@ -196,3 +196,107 @@ def test_update_nonexistent_listing_404s(client):
     owner_headers = _make_pharmacy_owner(client)
     r = client.patch("/api/pharmacies/products/9999", json={"price": 1.0}, headers=owner_headers)
     assert r.status_code == 404
+
+
+# ---------- Added for the frontend: names in listings + admin queue ----------
+
+def test_listing_response_includes_medicine_name(client):
+    admin_headers = _make_admin(client)
+    owner_headers = _make_pharmacy_owner(client)
+    medicine_id = client.post("/api/medicines/", json={
+        "name": "Paracetamol 500mg", "dosage": "500mg", "form": "Tablet",
+    }, headers=admin_headers).json()["medicine_id"]
+    pharmacy_id = client.post("/api/pharmacies/", json={
+        "name": "City Pharmacy", "address": "123 Main St"
+    }, headers=owner_headers).json()["pharmacy_id"]
+    client.post(f"/api/pharmacies/{pharmacy_id}/products", json={
+        "medicine_id": medicine_id, "price": 5.99,
+    }, headers=owner_headers)
+
+    listed = client.get(f"/api/pharmacies/{pharmacy_id}/products").json()
+    assert listed[0]["medicine_name"] == "Paracetamol 500mg"
+    assert listed[0]["medicine_detail"] == "500mg Tablet"
+
+
+def test_admin_all_requires_admin(client):
+    owner_headers = _make_pharmacy_owner(client)
+    assert client.get("/api/pharmacies/admin/all", headers=owner_headers).status_code == 403
+
+
+def test_admin_queue_lists_pending_with_owner_and_revoke_works(client):
+    admin_headers = _make_admin(client)
+    owner_headers = _make_pharmacy_owner(client, email="o2@example.com")
+    pharmacy_id = client.post("/api/pharmacies/", json={
+        "name": "Queue Pharmacy", "address": "1 Queue St"
+    }, headers=owner_headers).json()["pharmacy_id"]
+
+    pending = client.get("/api/pharmacies/admin/all", params={"status": "pending"}, headers=admin_headers).json()
+    assert [p["name"] for p in pending] == ["Queue Pharmacy"]
+    assert pending[0]["owner_email"] == "o2@example.com"
+
+    client.patch(f"/api/pharmacies/{pharmacy_id}/approve", headers=admin_headers)
+    assert client.get("/api/pharmacies/admin/all", params={"status": "pending"}, headers=admin_headers).json() == []
+
+    r = client.patch(f"/api/pharmacies/{pharmacy_id}/revoke", headers=admin_headers)
+    assert r.status_code == 200 and r.json()["is_approved"] is False
+    assert client.get("/api/pharmacies/").json() == []
+
+
+def _listing_setup(client):
+    admin_headers = _make_admin(client)
+    owner_headers = _make_pharmacy_owner(client, email="conf-owner@example.com")
+    medicine_id = _make_medicine(client, admin_headers, name="Confirm Med")
+    pharmacy_id = client.post("/api/pharmacies/", json={
+        "name": "Confirm Pharmacy", "address": "1 Confirm St"
+    }, headers=owner_headers).json()["pharmacy_id"]
+    product_id = client.post(f"/api/pharmacies/{pharmacy_id}/products", json={
+        "medicine_id": medicine_id, "price": 2.5, "availability_status": "available",
+    }, headers=owner_headers).json()["product_id"]
+    return owner_headers, pharmacy_id, product_id
+
+
+def _set_last_updated_to_old(product_id):
+    from datetime import datetime, timedelta
+    from .conftest import TestingSessionLocal
+    from app.models import PharmacyProduct
+    db = TestingSessionLocal()
+    p = db.query(PharmacyProduct).filter(PharmacyProduct.product_id == product_id).first()
+    p.last_updated = datetime.utcnow() - timedelta(days=5)
+    db.commit()
+    db.close()
+
+
+def test_confirm_product_refreshes_timestamp_and_logs(client):
+    from datetime import datetime
+    owner_headers, pharmacy_id, product_id = _listing_setup(client)
+    _set_last_updated_to_old(product_id)
+
+    r = client.post(f"/api/pharmacies/products/{product_id}/confirm", headers=owner_headers)
+    assert r.status_code == 200
+    updated = datetime.fromisoformat(r.json()["last_updated"])
+    assert (datetime.utcnow() - updated).total_seconds() < 60
+    assert r.json()["price"] == "2.50"  # values untouched
+
+    history = client.get(f"/api/pharmacies/{pharmacy_id}/updates", headers=owner_headers).json()
+    assert len(history) == 1
+    assert history[0]["old_price"] == history[0]["new_price"]
+
+
+def test_confirm_all_refreshes_every_listing(client):
+    from datetime import datetime
+    owner_headers, pharmacy_id, product_id = _listing_setup(client)
+    _set_last_updated_to_old(product_id)
+
+    r = client.post(f"/api/pharmacies/{pharmacy_id}/confirm-all", headers=owner_headers)
+    assert r.status_code == 200 and r.json()["confirmed"] == 1
+
+    listed = client.get(f"/api/pharmacies/{pharmacy_id}/products").json()
+    updated = datetime.fromisoformat(listed[0]["last_updated"])
+    assert (datetime.utcnow() - updated).total_seconds() < 60
+
+
+def test_stranger_cannot_confirm_someone_elses_listing(client):
+    _, _, product_id = _listing_setup(client)
+    stranger_headers = _make_pharmacy_owner(client, email="stranger-conf@example.com")
+    r = client.post(f"/api/pharmacies/products/{product_id}/confirm", headers=stranger_headers)
+    assert r.status_code == 403

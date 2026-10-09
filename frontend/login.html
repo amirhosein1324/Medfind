@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Log in · MedFind</title>
+<script>document.documentElement.dataset.theme=localStorage.getItem('medfind_theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light')</script>
+<link rel="preload" href="fonts/bricolage-grotesque-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/figtree-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="css/medfind.css">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to form</a>
+<header id="siteNav"></header>
+<main id="main" class="auth">
+  <div class="wrap auth__grid">
+    <div class="auth__pitch">
+      <h1 id="pitchTitle">Welcome back to MedFind</h1>
+      <p id="pitchText">Log in to manage your pharmacy's listings.</p>
+      <ul class="auth__points" id="pitchPoints"></ul>
+    </div>
+    <div class="auth__card">
+      <div class="tabs" role="tablist" aria-label="Account">
+        <button class="tab" role="tab" id="tabLogin" aria-controls="formLogin" type="button">Log in</button>
+        <button class="tab" role="tab" id="tabReg" aria-controls="formReg" type="button">Create account</button>
+      </div>
+
+      <form id="formLogin" role="tabpanel" aria-labelledby="tabLogin" novalidate>
+        <div class="field"><label class="label" for="liEmail">Email</label>
+          <input class="input" id="liEmail" type="email" autocomplete="username" required></div>
+        <div class="field"><label class="label" for="liPass">Password</label>
+          <input class="input" id="liPass" type="password" autocomplete="current-password" required></div>
+        <p class="form-error" id="liErr" role="alert"></p>
+        <button class="btn btn--primary btn--lg btn--block" type="submit" id="liBtn">Log in</button>
+      </form>
+
+      <form id="formReg" role="tabpanel" aria-labelledby="tabReg" novalidate hidden>
+        <fieldset class="role-pick">
+          <legend>I am a…</legend>
+          <label class="role-opt"><input type="radio" name="role" value="customer"><span><b>Customer</b><small>Find medicine nearby</small></span></label>
+          <label class="role-opt"><input type="radio" name="role" value="pharmacy_owner"><span><b>Pharmacy owner</b><small>List my stock</small></span></label>
+        </fieldset>
+        <div class="field"><label class="label" for="rgName">Full name</label>
+          <input class="input" id="rgName" autocomplete="name" required></div>
+        <div class="field"><label class="label" for="rgEmail">Email</label>
+          <input class="input" id="rgEmail" type="email" autocomplete="email" required></div>
+        <div class="field-row field-row--2">
+          <div class="field"><label class="label" for="rgPass">Password <small>(8+ characters)</small></label>
+            <input class="input" id="rgPass" type="password" autocomplete="new-password" minlength="8" required></div>
+          <div class="field"><label class="label" for="rgPhone">Phone <small>(optional)</small></label>
+            <input class="input" id="rgPhone" type="tel" autocomplete="tel"></div>
+        </div>
+        <p class="form-error" id="rgErr" role="alert"></p>
+        <button class="btn btn--primary btn--lg btn--block" type="submit" id="rgBtn">Create account</button>
+      </form>
+    </div>
+  </div>
+</main>
+<script src="js/config.js"></script>
+<script src="js/core.js"></script>
+<script src="js/login.js"></script>
+</body>
+</html>

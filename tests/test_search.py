@@ -221,3 +221,29 @@ def test_search_is_logged_to_search_history(client):
     ).all()
     db.close()
     assert len(entries) == 1
+
+
+def test_search_result_includes_pharmacy_contact_fields(client):
+    admin_headers = _make_admin(client)
+    owner_headers = _make_pharmacy_owner(client)
+    medicine_id = client.post("/api/medicines/", json={
+        "name": "Ibuprofen 400mg", "generic_name": "Ibuprofen", "dosage": "400mg", "form": "Tablet",
+    }, headers=admin_headers).json()["medicine_id"]
+    pharmacy_id = client.post("/api/pharmacies/", json={
+        "name": "Contact Pharmacy", "address": "9 Contact St",
+        "phone": "+49 69 123456", "opening_hours": "Mon-Fri 8-20",
+    }, headers=owner_headers).json()["pharmacy_id"]
+    client.patch(f"/api/pharmacies/{pharmacy_id}/approve", headers=admin_headers)
+    _listing(client, owner_headers, pharmacy_id, medicine_id, price=3.5, availability_status="available")
+
+    r = client.get("/api/search/", params={"q": "ibuprofen"}).json()[0]
+    assert r["phone"] == "+49 69 123456"
+    assert r["opening_hours"] == "Mon-Fri 8-20"
+    assert r["medicine_detail"] == "400mg Tablet"
+    assert r["generic_name"] == "Ibuprofen"
+
+
+def test_frontend_is_served_from_the_api(client):
+    r = client.get("/app/")
+    assert r.status_code == 200
+    assert "text/html" in r.headers["content-type"]

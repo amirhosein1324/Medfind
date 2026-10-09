@@ -1,5 +1,8 @@
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from .database import Base, engine
 from .routers import auth, medicines, pharmacies, search, users
@@ -32,6 +35,13 @@ app.include_router(pharmacies.router, prefix="/api/pharmacies", tags=["Pharmacie
 app.include_router(search.router, prefix="/api/search", tags=["Search"])
 
 
+# Serve the web UI from the same origin as the API (no CORS, no second server):
+#   http://localhost:8000/app/
+FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
+if FRONTEND_DIR.is_dir():
+    app.mount("/app", StaticFiles(directory=FRONTEND_DIR, html=True), name="frontend")
+
+
 @app.get("/")
 def root():
-    return {"message": "Welcome to MedFind API", "docs": "/docs"}
+    return {"message": "Welcome to MedFind API", "docs": "/docs", "app": "/app/"}

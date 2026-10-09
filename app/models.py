@@ -147,6 +147,19 @@ class PharmacyProduct(Base):
         "PharmacyUpdate", back_populates="product", cascade="all, delete-orphan"
     )
 
+    @property
+    def medicine_name(self) -> str | None:
+        """Convenience for API responses (lets UIs show names, not bare ids)."""
+        return self.medicine.name if self.medicine else None
+
+    @property
+    def medicine_detail(self) -> str | None:
+        """Dosage + form, e.g. '500mg Tablet'."""
+        if not self.medicine:
+            return None
+        parts = [self.medicine.dosage, self.medicine.form]
+        return " ".join(p for p in parts if p) or None
+
 
 class PharmacyUpdate(Base):
     """Audit trail: one row per change to a pharmacy_products listing."""

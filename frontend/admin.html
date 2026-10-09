@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Admin · MedFind</title>
+<script>document.documentElement.dataset.theme=localStorage.getItem('medfind_theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light')</script>
+<link rel="preload" href="fonts/bricolage-grotesque-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/figtree-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="css/medfind.css">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header id="siteNav"></header>
+<main id="main" class="page wrap">
+  <div class="page__head"><div><h1>Admin</h1><p>Approve pharmacies and manage the medicine catalogue.</p></div></div>
+  <div class="tabs tabs--line" role="tablist" aria-label="Sections" id="tabs">
+    <button class="tab" role="tab" data-tab="pharmacies" type="button">Pharmacies</button>
+    <button class="tab" role="tab" data-tab="medicines" type="button">Medicines</button>
+    <button class="tab" role="tab" data-tab="categories" type="button">Categories</button>
+    <button class="tab" role="tab" data-tab="users" type="button">Users</button>
+  </div>
+  <div id="panel" aria-live="polite"></div>
+</main>
+
+<dialog class="sheet" id="formDialog" aria-labelledby="fdTitle">
+  <form class="sheet__form" id="fdForm" method="dialog">
+    <div class="sheet__head"><h2 id="fdTitle"></h2><button class="btn btn--ghost btn--icon" type="button" data-close-dialog aria-label="Close" id="fdClose"></button></div>
+    <div class="sheet__body" id="fdBody"></div>
+    <div class="sheet__foot"><button class="btn btn--ghost" type="button" data-close-dialog>Cancel</button><button class="btn btn--primary" type="submit">Save</button></div>
+  </form>
+</dialog>
+
+<script src="js/config.js"></script>
+<script src="js/core.js"></script>
+<script src="js/admin.js"></script>
+</body>
+</html>

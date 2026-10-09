@@ -112,6 +112,12 @@ class PharmacyResponse(BaseModel):
     created_at: datetime
 
 
+class AdminPharmacyResponse(PharmacyResponse):
+    owner_name: str | None = None
+    owner_email: str | None = None
+    product_count: int = 0
+
+
 # ---------- Pharmacy products (listings) ----------
 
 class PharmacyProductCreate(BaseModel):
@@ -142,6 +148,8 @@ class PharmacyProductResponse(BaseModel):
     last_updated: datetime
     product_url: str | None
     is_active: bool
+    medicine_name: str | None = None
+    medicine_detail: str | None = None
 
 
 # ---------- Pharmacy update history (audit trail) ----------
@@ -177,3 +185,11 @@ class SearchResult(BaseModel):
     latitude: float | None
     longitude: float | None
     distance_km: float | None = None
+    # extra fields so the public UI can show a full pharmacy card
+    medicine_detail: str | None = None
+    generic_name: str | None = None
+    phone: str | None = None
+    website: str | None = None
+    opening_hours: str | None = None
+    is_verified: bool = False
+    prescription_required: bool = False

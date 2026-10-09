@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="description" content="Find which pharmacies have your medicine, compare price and distance, and see how recently each listing was confirmed.">
+<title>MedFind: find your medicine at a pharmacy near you</title>
+<script>document.documentElement.dataset.theme=localStorage.getItem('medfind_theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light')</script>
+<link rel="preload" href="fonts/bricolage-grotesque-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/figtree-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="css/medfind.css">
+<link rel="stylesheet" href="css/search.css">
+</head>
+<body>
+<a class="skip" href="#results">Skip to results</a>
+<header id="siteNav"></header>
+
+<main>
+  <!-- ============ HERO + SEARCH ============ -->
+  <section class="hero" id="hero">
+    <div class="wrap hero__grid">
+      <div class="hero__copy">
+        <h1 class="hero__title">Which pharmacy has your medicine right now?</h1>
+        <p class="hero__lede">Search once. Compare availability, price and distance across nearby pharmacies, with the time each listing was last confirmed.</p>
+
+        <form class="searchbar-wrap" id="searchForm" role="search" autocomplete="off">
+          <div class="searchbar">
+            <span class="searchbar__icon" aria-hidden="true"></span>
+            <label class="visually-hidden" for="q">Medicine name</label>
+            <input class="searchbar__input" id="q" name="q" type="search" inputmode="search"
+                   placeholder="Medicine, brand or generic name" enterkeyhint="search" autocapitalize="off" spellcheck="false">
+            <button class="btn btn--primary searchbar__go" type="submit"><span class="searchbar__go-icon" aria-hidden="true"></span><span>Search</span></button>
+          </div>
+          <ul class="suggest" id="suggest" aria-label="Medicine suggestions"></ul>
+        </form>
+
+        <div class="hero__loc">
+          <button class="chip" type="button" id="locBtn" aria-pressed="false"><span id="locBtnIcon" aria-hidden="true"></span><span id="locBtnText">Use my location</span></button>
+          <span class="hint" id="locHint">Location stays in your browser and is only used to measure distance.</span>
+        </div>
+
+        <div class="hero__quick" id="quick" aria-label="Quick searches"></div>
+      </div>
+
+      <aside class="hero__stage" aria-hidden="true">
+        <div class="stage__label">Example result</div>
+        <div class="sample sample--back">
+          <div class="sample__row"><strong>Riverside Pharmacy</strong><span class="sample__price">$3.80</span></div>
+          <div class="sample__row sample__row--sub"><span>Paracetamol 500mg Tablet</span><span class="status" data-s="limited_stock" id="sampleStatusB"></span></div>
+        </div>
+        <div class="sample sample--front">
+          <div class="sample__flags"><span class="flag" id="sampleFlag"></span></div>
+          <div class="sample__row"><strong>Green Cross Pharmacy</strong><span class="sample__price">$4.20</span></div>
+          <div class="sample__row sample__row--sub"><span>Paracetamol 500mg Tablet</span><span class="status" data-s="available" id="sampleStatusA"></span></div>
+          <div class="sample__meta"><span id="samplePin"></span> 1.1 km away</div>
+          <div class="sample__fresh">
+            <span class="fresh" data-tier="fresh"><span class="fresh__bars sample__bars"><i></i><i></i><i></i><i></i><i></i></span><span class="fresh__text">Updated 5 min ago</span></span>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ============ RESULTS ============ -->
+  <section class="results wrap" id="results" hidden aria-labelledby="resultsTitle">
+    <div class="banner" id="demoBanner" role="status" hidden>
+      <span id="demoBannerIcon" aria-hidden="true"></span>
+      <span>Can't reach the MedFind API, so you're seeing sample data. <button class="link-btn" type="button" data-open-connection>Change API address</button></span>
+    </div>
+
+    <div class="results__layout">
+      <aside class="filters-col" aria-label="Filters">
+        <div class="filters-col__inner" id="filtersDesktop"></div>
+      </aside>
+
+      <div class="results__main">
+        <div class="results__head">
+          <div>
+            <h2 class="results__title" id="resultsTitle" tabindex="-1">Results</h2>
+            <p class="results__sub" id="resultsSub"></p>
+          </div>
+          <div class="results__tools">
+            <button class="btn btn--secondary btn--sm filters-btn" type="button" id="filtersBtn"><span id="filtersBtnIcon" aria-hidden="true"></span><span>Filters</span><span class="filters-btn__count" id="filtersCount" hidden></span></button>
+            <label class="visually-hidden" for="sortSel">Sort results</label>
+            <select class="select select--sm" id="sortSel">
+              <option value="best">Best overall</option>
+              <option value="nearest">Nearest</option>
+              <option value="price">Lowest price</option>
+              <option value="updated">Recently updated</option>
+            </select>
+            <div class="seg" role="group" aria-label="Result layout">
+              <button type="button" class="seg__btn" id="viewCards" aria-pressed="true" aria-label="Card view"></button>
+              <button type="button" class="seg__btn" id="viewTable" aria-pressed="false" aria-label="Comparison table view"></button>
+            </div>
+          </div>
+        </div>
+
+        <div class="products" id="products" role="group" aria-label="Narrow by product" hidden></div>
+        <div id="resultList" class="result-list" aria-live="polite"></div>
+        <p class="visually-hidden" id="liveStatus" role="status"></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ WHY / HOW (shown before the first search) ============ -->
+  <section class="why wrap" id="why">
+    <div class="why__grid">
+      <div class="why__item">
+        <span id="why1" class="why__icon" aria-hidden="true"></span>
+        <h2>One search, every pharmacy</h2>
+        <p>Use a brand, a generic name or an alternative spelling. Results come from every approved pharmacy at once, so you stop calling around.</p>
+      </div>
+      <div class="why__item">
+        <span id="why2" class="why__icon" aria-hidden="true"></span>
+        <h2>See how fresh each answer is</h2>
+        <p>Every listing shows when the pharmacy last confirmed it, and warns you when the information is old.</p>
+      </div>
+      <div class="why__item">
+        <span id="why3" class="why__icon" aria-hidden="true"></span>
+        <h2>Pharmacies you can trust</h2>
+        <p>Pharmacies are reviewed before they appear. A shield marks the ones that have been verified.</p>
+      </div>
+    </div>
+
+    <div class="owner-cta">
+      <div>
+        <h2>Run a pharmacy?</h2>
+        <p>Keep your stock visible to people searching nearby. Update prices and availability in seconds, or import a spreadsheet.</p>
+      </div>
+      <a class="btn btn--primary btn--lg" href="login.html?mode=register&amp;role=pharmacy_owner">List your pharmacy</a>
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="wrap footer__grid">
+    <p><strong>Good to know.</strong> MedFind shows availability and prices reported by pharmacies. It does not give medical advice or recommend medicines. Stock and prices change quickly, so confirm with the pharmacy before you travel. Prescription-only medicines need a valid prescription.</p>
+    <div class="footer__links">
+      <a href="login.html">Log in</a>
+      <a href="login.html?mode=register&amp;role=pharmacy_owner">For pharmacies</a>
+      <button class="link-btn" type="button" data-open-connection>API address</button>
+    </div>
+  </div>
+</footer>
+
+<!-- Filters (mobile bottom sheet; the same controls live in the sidebar on wide screens) -->
+<dialog class="sheet sheet--bottom" id="filtersSheet" aria-labelledby="filtersSheetTitle">
+  <div class="sheet__form">
+    <div class="sheet__head"><h2 id="filtersSheetTitle">Filters</h2><button class="btn btn--ghost btn--icon" type="button" data-close-dialog aria-label="Close filters" id="filtersClose"></button></div>
+    <div class="sheet__body" id="filtersMobile"></div>
+    <div class="sheet__foot"><button class="btn btn--primary btn--block" type="button" data-close-dialog id="filtersDone">Show results</button></div>
+  </div>
+</dialog>
+
+<template id="filtersTpl">
+  <div class="filters">
+    <h2 class="filters__title">Filters</h2>
+    <fieldset class="fgroup">
+      <legend>Availability</legend>
+      <label class="check"><input type="checkbox" data-filter="inStock"><span>In stock only</span></label>
+      <label class="check"><input type="checkbox" data-filter="verified"><span>Verified pharmacies only</span></label>
+    </fieldset>
+    <fieldset class="fgroup">
+      <legend>Distance</legend>
+      <div class="range">
+        <input type="range" min="1" max="50" step="1" value="50" data-filter="maxKm" aria-label="Maximum distance in kilometres">
+        <output data-out="maxKm">Any distance</output>
+      </div>
+      <p class="hint" data-loc-hint>Turn on your location to filter by distance.</p>
+    </fieldset>
+    <button class="btn btn--ghost btn--sm" type="button" data-clear-filters>Clear filters</button>
+  </div>
+</template>
+
+<!-- API address -->
+<dialog class="sheet" id="connectionDialog" aria-labelledby="connTitle">
+  <form class="sheet__form" id="connectionForm" method="dialog">
+    <div class="sheet__head"><h2 id="connTitle">API address</h2><button class="btn btn--ghost btn--icon" type="button" data-close-dialog aria-label="Close" id="connClose"></button></div>
+    <div class="sheet__body">
+      <div class="field">
+        <label class="label" for="connInput">Where is the MedFind API running?</label>
+        <input class="input" id="connInput" type="url" placeholder="http://127.0.0.1:8000" required>
+        <p class="hint">If you opened this page from the API itself (/app/), this is already correct.</p>
+      </div>
+    </div>
+    <div class="sheet__foot">
+      <button class="btn btn--ghost" type="button" data-close-dialog>Cancel</button>
+      <button class="btn btn--primary" type="submit">Save and retry</button>
+    </div>
+  </form>
+</dialog>
+
+<script src="js/config.js"></script>
+<script src="js/core.js"></script>
+<script src="js/demo.js"></script>
+<script src="js/search.js"></script>
+</body>
+</html>

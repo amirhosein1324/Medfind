@@ -54,6 +54,14 @@ def search_medicine(
             Pharmacy.address,
             Pharmacy.latitude,
             Pharmacy.longitude,
+            Pharmacy.phone,
+            Pharmacy.website,
+            Pharmacy.opening_hours,
+            Pharmacy.is_verified,
+            Medicine.generic_name,
+            Medicine.dosage,
+            Medicine.form,
+            Medicine.prescription_required,
         )
         .join(PharmacyProduct, Medicine.medicine_id == PharmacyProduct.medicine_id)
         .join(Pharmacy, PharmacyProduct.pharmacy_id == Pharmacy.pharmacy_id)
@@ -100,6 +108,13 @@ def search_medicine(
                 latitude=float(r.latitude) if r.latitude is not None else None,
                 longitude=float(r.longitude) if r.longitude is not None else None,
                 distance_km=distance,
+                medicine_detail=" ".join(x for x in (r.dosage, r.form) if x) or None,
+                generic_name=r.generic_name,
+                phone=r.phone,
+                website=r.website,
+                opening_hours=r.opening_hours,
+                is_verified=bool(r.is_verified),
+                prescription_required=bool(r.prescription_required),
             )
         )
 
