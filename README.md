@@ -5,6 +5,14 @@ comparison platform, implementing the 8-table database design from the
 project proposal plus the authentication, authorization, and audit-trail
 features the proposal calls out as needed for production.
 
+## Screenshots
+
+| English (LTR) | Persian (RTL) |
+|:---:|:---:|
+| ![MedFind search results in English](docs/screenshots/search-en.png) | ![MedFind search results in Persian](docs/screenshots/search-fa.png) |
+
+The screenshots show sample data. The language button (**فارسی / English**) in the top bar switches the whole public site between English and Persian with right-to-left layout.
+
 ## 1. Project Structure
 
 ```
