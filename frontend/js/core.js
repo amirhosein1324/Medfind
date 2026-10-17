@@ -279,6 +279,10 @@
     categories: () => request("/api/medicines/categories"),
     createCategory: (b) => post("/api/medicines/categories", b),
 
+    webSuggest: (q, signal) => request("/api/web/suggest" + qs({ q }), { signal, auth: false }),
+    webSources: () => request("/api/web/sources"),
+    crawlNow: (d) => request("/api/web/crawl/" + encodeURIComponent(d), { method: "POST" }),
+    webSearch: (q, signal) => request("/api/web/search" + qs({ q }), { signal, auth: false }),
     search: (params, signal) => request("/api/search/" + qs(params), { signal, auth: false }),
 
     myPharmacies: () => request("/api/pharmacies/mine"),
@@ -288,6 +292,8 @@
     updateListing: (id, b) => patch("/api/pharmacies/products/" + id, b),
     confirmListing: (id) => post("/api/pharmacies/products/" + id + "/confirm"),
     confirmAll: (pid) => post("/api/pharmacies/" + pid + "/confirm-all"),
+    importStock: (pid, file) => { const f = new FormData(); f.append("file", file); return request("/api/pharmacies/" + pid + "/import", { method: "POST", body: f, form: true }); },
+    importCatalog: (file) => { const f = new FormData(); f.append("file", file); return request("/api/medicines/import", { method: "POST", body: f, form: true }); },
     history: (pid) => request("/api/pharmacies/" + pid + "/updates"),
 
     adminPharmacies: (status) => request("/api/pharmacies/admin/all" + qs({ status })),

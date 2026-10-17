@@ -166,3 +166,14 @@ input[type="range"]:disabled { opacity: 0.45; }
 .cmp__sub { color: var(--muted); font-size: var(--fs-sm); }
 .cmp__price { font-family: var(--font-display); font-weight: 700; font-size: 1.15rem; }
 .cmp tr.is-best td:first-child { box-shadow: inset 3px 0 0 var(--brand); }
+
+/* ---- results from other websites ---- */
+.web { margin-top: var(--s-6); padding-top: var(--s-5); border-top: 1px solid var(--line); }
+.web__title { font-size: var(--fs-lg); margin-bottom: 0.25rem; }
+.web__list { list-style: none; margin: var(--s-3) 0 0; padding: 0; display: grid; gap: var(--s-2); }
+.web__item { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: var(--s-3); padding: 0.85rem 1rem; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-sm); }
+.web__item a { font-weight: 600; }
+.web__buy { display: flex; align-items: center; gap: var(--s-3); }
+
+.web__main { min-width: 0; flex: 1; }
+.web__fa { color: var(--ink-2); font-size: var(--fs-sm); margin-top: 0.1rem; }

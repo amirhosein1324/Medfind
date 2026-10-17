@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
@@ -12,9 +12,26 @@ from ..schemas import (
     MedicineCreate,
     MedicineResponse,
 )
+from ..ingest import catalog
 from ..security import require_role
 
 router = APIRouter()
+
+
+# ---------- Bulk catalogue import ----------
+
+@router.post("/import")
+async def import_catalog_csv(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    _admin: User = Depends(require_role("admin")),
+):
+    """Admin: add medicines from a CSV (name, generic_name, brand_name, dosage,
+    form, barcode, manufacturer, prescription_required, aliases separated by |)."""
+    data = await file.read(5_000_001)
+    if len(data) > 5_000_000:
+        raise HTTPException(status_code=413, detail="File too large (max 5 MB)")
+    return catalog.from_csv(db, data)
 
 
 # ---------- Categories ----------

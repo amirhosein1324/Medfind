@@ -16,11 +16,11 @@
   const err = (e) => `<div class="empty">${icon("alert")}<h3>Something went wrong</h3><p>${esc(e.message)}</p></div>`;
 
   async function show(t) {
-    tab = ["pharmacies", "medicines", "categories", "users"].includes(t) ? t : "pharmacies";
+    tab = ["pharmacies", "medicines", "categories", "sources", "users"].includes(t) ? t : "pharmacies";
     history.replaceState(null, "", "#" + tab);
     $$("[data-tab]").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.tab === tab)));
     panel.innerHTML = '<div class="skeleton" style="height:180px"></div>';
-    try { await ({ pharmacies, medicines, categories, users }[tab])(); } catch (e) { panel.innerHTML = err(e); }
+    try { await ({ pharmacies, medicines, categories, sources, users }[tab])(); } catch (e) { panel.innerHTML = err(e); }
   }
 
   /* ---------- pharmacies ---------- */
@@ -43,7 +43,7 @@
     const list = await api.medicines(q || "");
     panel.innerHTML = `<div class="toolbar"><label class="visually-hidden" for="mq">Search medicines</label>
       <input class="input" id="mq" type="search" placeholder="Search medicines" value="${esc(q || "")}">
-      <span class="toolbar__grow"></span><button class="btn btn--primary" id="newMed">${icon("plus")}New medicine</button></div>` +
+      <span class="toolbar__grow"></span><label class="btn btn--secondary" style="cursor:pointer">${icon("upload")}Import CSV<input type="file" id="medCsv" accept=".csv,.txt" hidden></label><button class="btn btn--primary" id="newMed">${icon("plus")}New medicine</button></div>` +
       (list.length ? `<div class="dt-wrap"><table class="dt"><thead><tr><th>Name</th><th>Generic</th><th>Brand</th><th>Form</th><th>Rx</th><th></th></tr></thead><tbody>` +
         list.map((m) => `<tr><td class="name">${esc(m.name)}</td><td>${esc(m.generic_name || "")}</td><td>${esc(m.brand_name || "")}</td><td>${esc([m.dosage, m.form].filter(Boolean).join(" "))}</td>
           <td>${m.prescription_required ? '<span class="pill" data-t="warn">Rx</span>' : ""}</td>
@@ -52,6 +52,11 @@
     $("#mq").addEventListener("input", MF.debounce((e) => medicines(e.target.value), 300));
     const mq = $("#mq"); if (q) { mq.focus(); mq.setSelectionRange(q.length, q.length); }
     $("#newMed").onclick = newMedicine;
+    $("#medCsv").onchange = async (e) => {
+      const f = e.target.files[0]; if (!f) return;
+      try { const r = await api.importCatalog(f); MF.toast(`${r.created} added, ${r.existing} already existed`); medicines(); }
+      catch (x) { MF.toast(x.message, "error"); }
+    };
   }
   function field(id, label, extra) { return `<div class="field"><label class="label" for="${id}">${label}</label><input class="input" id="${id}" ${extra || ""}></div>`; }
   function openForm(title, html, onSubmit) {
@@ -93,6 +98,19 @@
       async () => { const n = $("#cN").value.trim(); if (!n) throw new Error("Name is required."); await api.createCategory({ name: n, description: $("#cD").value.trim() || null }); });
   }
 
+  /* ---------- crawler data sources ---------- */
+  const SRC_NOTE = { ok: "Working", pending: "Not crawled yet", blocked_by_robots: "Site forbids crawlers", unreachable: "Not reachable",
+    no_sitemap: "No sitemap found", no_product_data: "No price data on pages" };
+  async function sources() {
+    const list = await api.webSources();
+    panel.innerHTML = `<p class="hint" style="margin-bottom:var(--s-3)">The crawler runs automatically (see <code>scripts/crawl.py</code>) and only reads sites that allow it in robots.txt.</p>
+      <div class="dt-wrap"><table class="dt"><thead><tr><th>Website</th><th>Status</th><th>Products</th><th>Last run</th><th></th></tr></thead><tbody>` +
+      list.map((s) => `<tr><td class="name">${esc(s.domain)}<div class="sub">${esc(s.detail || "")}</div></td>
+        <td><span class="pill" data-t="${s.status === "ok" ? "ok" : s.status === "pending" ? "" : "warn"}">${esc(SRC_NOTE[s.status] || s.status)}</span></td>
+        <td class="num">${s.products_total}</td><td>${s.last_run ? esc(ago(s.last_run)) : "–"}</td>
+        <td><div class="acts"><button class="btn btn--secondary btn--sm" data-crawl="${esc(s.domain)}">${icon("refresh")}Crawl now</button></div></td></tr>`).join("") + `</tbody></table></div>`;
+  }
+
   /* ---------- users ---------- */
   async function users() {
     const list = await api.users();
@@ -106,6 +124,7 @@
       if (t.dataset.ph) { phFilter = t.dataset.ph; show("pharmacies"); }
       else if (t.dataset.approve) { await api.approve(t.dataset.approve); MF.toast("Pharmacy approved"); show("pharmacies"); }
       else if (t.dataset.revoke) { if (confirm("Remove this pharmacy from public search?")) { await api.revoke(t.dataset.revoke); MF.toast("Approval revoked"); show("pharmacies"); } }
+      else if (t.dataset.crawl) { await api.crawlNow(t.dataset.crawl); MF.toast("Crawl started. Refresh in a minute."); }
       else if (t.dataset.alias) aliasDialog(Number(t.dataset.alias), t.dataset.name);
     } catch (x) { MF.toast(x.message, "error"); }
   });

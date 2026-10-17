@@ -238,3 +238,32 @@ they're not yet automated here:
   Elasticsearch/Meilisearch) if the `ilike` matching in `search.py` doesn't
   scale or isn't fuzzy enough — the proposal's "Smart Search" section
   (typo tolerance, relevance ranking) is a natural next iteration here.
+
+## Finding medicines on other websites (optional)
+MedFind can discover products on third-party sites through the official **Google Programmable Search API**, read their schema.org price/stock data (respecting robots.txt), cache the result for 24 h and show it under "From other websites".
+1. Create a search engine set to "Search the entire web" at programmablesearchengine.google.com and copy its ID.
+2. Enable the Custom Search API in Google Cloud and create an API key (100 free queries/day).
+3. Put `GOOGLE_API_KEY` and `GOOGLE_CSE_ID` in `.env`, then `docker compose up -d --build`.
+Endpoint: `GET /api/web/search?q=...`. These results are not confirmed by a pharmacy and are labelled as such.
+
+## Real data: catalogue and pharmacy stock
+**Medicine catalogue** (do this first so search covers real medicines):
+    python -m scripts.import_catalog --openfda --limit 5000        # US FDA drug directory (free)
+    python -m scripts.import_catalog --csv regulator_list.csv      # any country's official list
+    (Docker: docker compose exec api python -m scripts.import_catalog --openfda)
+CSV columns: name, generic_name, brand_name, dosage, form, barcode, manufacturer, prescription_required, aliases (use | between aliases). Admins can also upload this CSV in Admin > Medicines > Import CSV.
+
+**Pharmacy stock**: owners click "Import file" on their dashboard and upload a CSV/XLSX with `medicine` (or `barcode`) plus `price`, `status`, `stock`. Rows are matched to the catalogue by barcode, name or alias; changes are written to the audit history; unmatched rows are listed so they can be fixed. API: `POST /api/pharmacies/{id}/import` (multipart `file`).
+
+## Automatic data from Iranian online pharmacies (no manual entry)
+A crawler reads product pages of Iranian online pharmacies, stores name, price (converted to Toman), stock and link, derives English names from the Persian titles (`app/ingest/persian.py`), and the search page shows them under "Online pharmacies". Search works in English or Persian.
+
+    docker compose up -d --build        # starts api + db + crawler (re-crawls every 6 h)
+    docker compose logs -f crawler      # watch it work
+    docker compose exec api python -m scripts.crawl --domain example.ir --max-pages 50   # one site, now
+
+* Sites: `CRAWL_SOURCES=a.ir,b.ir` in `.env` (defaults in `app/ingest/sources.py` are unverified candidates).
+* Rules: a site is crawled only if its robots.txt allows it, with a delay between requests, public addresses only.
+* Pages are read through schema.org Product JSON-LD, Torob-style `product_price` meta tags, or Open Graph price tags.
+* Admin > Data sources shows, per site, whether it worked: Working / Site forbids crawlers / Not reachable / No sitemap / No price data. Fix by removing sites that don't work or adding ones that do.
+* Do NOT run `scripts.seed_demo` in production: it creates fake sample pharmacies for UI demos only.

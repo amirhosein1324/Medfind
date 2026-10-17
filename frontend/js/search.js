@@ -48,8 +48,11 @@
     input, list: $("#suggest"), minChars: 2,
     fetch: async (q) => {
       let list;
-      try { list = await api.medicines(q); }
-      catch (e) { list = window.MFDemo ? MFDemo.medicines(q) : []; }
+      try {
+        const [a, b] = await Promise.all([api.medicines(q), api.webSuggest(q).catch(() => [])]);
+        const seen = new Set(a.map((m) => m.name.toLowerCase()));
+        list = a.slice(0, 5).concat(b.filter((m) => !seen.has(m.name.toLowerCase())));
+      } catch (e) { list = window.MFDemo ? MFDemo.medicines(q) : []; }
       return (list || []).slice(0, 8);
     },
     render: (m) => `<span>${esc(m.name)}</span><small>${esc(m.generic_name || m.brand_name || "")}</small>`,
@@ -186,6 +189,7 @@
       state.raw = data || [];
       $("#demoBanner").hidden = !state.demo;
       render(true);
+      loadWeb(q, my);
     } catch (e) {
       if (my !== state.seq) return;
       $("#resultsTitle").textContent = "Something went wrong";
@@ -193,6 +197,37 @@
         <button class="btn btn--secondary" type="button" id="retry">Try again</button></div>`;
       $("#retry").addEventListener("click", () => runSearch(q));
     }
+  }
+
+  /* ------------------------------------------------ results from other websites */
+  const fmtPrice = (i) => i.price == null ? "" :
+    i.currency === "IRT" ? Math.round(Number(i.price)).toLocaleString("en-US") + " Toman"
+      : Number(i.price).toFixed(2) + " " + (i.currency || "");
+
+  async function loadWeb(q, my) {
+    const host = $("#webResults");
+    host.hidden = true;
+    if (state.demo) return;
+    host.hidden = false;
+    host.innerHTML = `<h2 class="web__title" id="webTitle">Online pharmacies</h2><div class="skeleton skel-line" style="width:50%"></div>`;
+    try {
+      const res = await api.webSearch(q);
+      if (my !== state.seq) return;
+      if (!res.enabled || !res.items.length) { host.hidden = true; return; }
+      const sites = new Set(res.items.map((i) => i.source_domain)).size;
+      if (!state.raw.length) {
+        $("#resultList").innerHTML = "";
+        $("#resultsTitle").textContent = `Results for “${q}”`;
+        $("#resultsSub").textContent = `${res.items.length} products from ${sites} online pharmac${sites === 1 ? "y" : "ies"}`;
+      }
+      host.innerHTML = `<h2 class="web__title" id="webTitle">Online pharmacies</h2>
+        <p class="hint">Collected automatically from pharmacy websites. Prices and stock may be out of date, so confirm on the site.</p>
+        <ul class="web__list">${res.items.map((i) => `<li class="web__item">
+          <div class="web__main"><a href="${esc(MF.safeUrl(i.url) || "#")}" target="_blank" rel="noopener nofollow">${esc(i.title_en || i.title)}</a>
+          ${i.title_en && i.title !== i.title_en ? `<div class="web__fa" dir="auto">${esc(i.title)}</div>` : ""}
+          <div class="hint">${esc(i.source_domain)} · checked ${esc(ago(i.fetched_at))}</div></div>
+          <div class="web__buy">${i.price != null ? `<strong class="num">${esc(fmtPrice(i))}</strong>` : ""}${statusHTML(i.availability)}</div></li>`).join("")}</ul>`;
+    } catch (e) { if (my === state.seq) host.hidden = true; }
   }
 
   function skeletons() {

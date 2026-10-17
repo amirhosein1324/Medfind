@@ -3,6 +3,7 @@
   const { $, $$, esc, icon, api, money, freshnessHTML, ageHours, ago } = MF;
   const root = $("#main");
   $("#addClose").innerHTML = icon("x");
+  $("#impClose").innerHTML = icon("x");
   const S = { pharmacies: [], pid: null, listings: [], q: "", dirty: new Map(), pickedMed: null };
 
   const STATUS_OPTS = [["available", "Available"], ["limited_stock", "Limited stock"], ["out_of_stock", "Out of stock"], ["unknown", "Not confirmed"]];
@@ -84,6 +85,7 @@
         <div class="page__actions">
           ${S.pharmacies.length > 1 ? `<label class="visually-hidden" for="pharmSel">Pharmacy</label><select class="select" id="pharmSel" style="width:auto">${S.pharmacies.map((x) => `<option value="${x.pharmacy_id}"${x.pharmacy_id === S.pid ? " selected" : ""}>${esc(x.name)}</option>`).join("")}</select>` : ""}
           <button class="btn btn--secondary" id="confirmAll">${icon("check-circle")}Everything is up to date</button>
+          <button class="btn btn--secondary" id="impBtn">${icon("upload")}Import file</button>
           <button class="btn btn--primary" id="addBtn">${icon("plus")}Add medicine</button>
         </div>
       </div>
@@ -100,6 +102,7 @@
     paintTable();
     $("#filt").oninput = (e) => { S.q = e.target.value; paintTable(); };
     $("#addBtn").onclick = openAdd;
+    $("#impBtn").onclick = () => { $("#impResult").innerHTML = ""; $("#impForm").reset(); MF.openDialog($("#impDialog")); };
     $("#confirmAll").onclick = confirmAll;
     const sel = $("#pharmSel"); if (sel) sel.onchange = () => { S.pid = Number(sel.value); load(); };
   }
@@ -189,6 +192,26 @@
     if ($("#addStock").value !== "") body.stock_quantity = Number($("#addStock").value);
     try { await api.addListing(S.pid, body); MF.closeDialog($("#addDialog")); MF.toast("Listing added"); await load(); }
     catch (x) { $("#addErr").textContent = x.message; }
+  });
+
+  /* ---------- bulk import ---------- */
+  $("#impTpl").onclick = () => {
+    const csv = "medicine,price,status,stock\nParacetamol 500mg,4.20,available,40\nIbuprofen 400mg,5.40,limited_stock,3\n";
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" })); a.download = "medfind-stock-template.csv"; a.click();
+    URL.revokeObjectURL(a.href);
+  };
+  $("#impForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const f = $("#impFile").files[0]; if (!f) return;
+    const go = $("#impGo"), out = $("#impResult"); go.disabled = true; go.textContent = "Importing…";
+    try {
+      const r = await api.importStock(S.pid, f);
+      out.innerHTML = `<div class="banner banner--info">${icon("check-circle")}<span><strong>${r.created} added, ${r.updated} updated, ${r.skipped} skipped.</strong></span></div>` +
+        (r.problems.length ? `<ul class="hist" style="margin-top:var(--s-3);max-height:12rem;overflow:auto">${r.problems.map((p) => `<li><strong>Row ${p.row}${p.medicine ? " · " + esc(p.medicine) : ""}</strong><span>${esc(p.reason)}</span></li>`).join("")}</ul>` : "");
+      await load();
+    } catch (x) { out.innerHTML = `<p class="form-error">${esc(x.message)}</p>`; }
+    go.disabled = false; go.textContent = "Import";
   });
 
   init();

@@ -193,3 +193,34 @@ class SearchResult(BaseModel):
     opening_hours: str | None = None
     is_verified: bool = False
     prescription_required: bool = False
+
+
+# ---------- Web discovery ----------
+
+class WebProductResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    title: str
+    title_en: str | None
+    generic_en: str | None
+    url: str
+    source_domain: str
+    price: Decimal | None
+    currency: str | None
+    availability: str
+    image_url: str | None
+    fetched_at: datetime
+
+
+class WebSearchResponse(BaseModel):
+    enabled: bool
+    items: list[WebProductResponse]
+
+
+class CrawlSourceResponse(BaseModel):
+    domain: str
+    status: str
+    detail: str | None = None
+    urls_found: int = 0
+    products_total: int = 0
+    last_run: datetime | None = None

@@ -38,6 +38,19 @@
   </form>
 </dialog>
 
+<dialog class="sheet" id="impDialog" aria-labelledby="impTitle">
+  <form class="sheet__form" id="impForm" method="dialog">
+    <div class="sheet__head"><h2 id="impTitle">Import stock from a file</h2><button class="btn btn--ghost btn--icon" type="button" data-close-dialog aria-label="Close" id="impClose"></button></div>
+    <div class="sheet__body">
+      <p style="color:var(--ink-2)">Upload a CSV or Excel file with a <b>medicine</b> (or <b>barcode</b>) column and any of <b>price</b>, <b>status</b>, <b>stock</b>. Existing listings are updated; new ones are added.</p>
+      <p style="margin:var(--s-3) 0"><button class="link-btn" type="button" id="impTpl">Download a template</button></p>
+      <div class="field"><label class="label" for="impFile">File (.csv or .xlsx, up to 2 MB)</label><input class="input" id="impFile" type="file" accept=".csv,.xlsx,.xlsm,.txt,.tsv" required></div>
+      <div id="impResult" role="status" aria-live="polite" style="margin-top:var(--s-4)"></div>
+    </div>
+    <div class="sheet__foot"><button class="btn btn--ghost" type="button" data-close-dialog>Close</button><button class="btn btn--primary" type="submit" id="impGo">Import</button></div>
+  </form>
+</dialog>
+
 <script src="js/config.js"></script>
 <script src="js/core.js"></script>
 <script src="js/dashboard.js"></script>

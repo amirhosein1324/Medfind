@@ -23,11 +23,26 @@ services:
       db:
         condition: service_healthy
     environment:
+      CRAWL_SOURCES: ${CRAWL_SOURCES:-}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
+      GOOGLE_CSE_ID: ${GOOGLE_CSE_ID:-}
       DATABASE_URL: postgresql+psycopg2://medfind:medfind@db:5432/medfind
       SECRET_KEY: ${SECRET_KEY:-change-this-to-a-long-random-string}
       ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-60}
     ports:
       - "8000:8000"
+
+  # Keeps the web product index fresh: crawls Iranian online pharmacies every 6 h.
+  crawler:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg2://medfind:medfind@db:5432/medfind
+      CRAWL_SOURCES: ${CRAWL_SOURCES:-}
+    command: ["python", "-m", "scripts.crawl", "--loop", "--every", "6"]
 
   # Database-only stress test. Not started by `docker compose up`;
   # run it explicitly:  docker compose --profile stress run --rm stress

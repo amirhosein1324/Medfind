@@ -1,11 +1,11 @@
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from ..database import get_db
-from ..models import Medicine, Pharmacy, PharmacyProduct, PharmacyUpdate, User
+from ..models import Medicine, MedicineAlias, Pharmacy, PharmacyProduct, PharmacyUpdate, User
 from ..schemas import (
     AdminPharmacyResponse,
     PharmacyCreate,
@@ -15,6 +15,7 @@ from ..schemas import (
     PharmacyResponse,
     PharmacyUpdateHistoryItem,
 )
+from ..ingest.sheet import SheetError, parse_sheet
 from ..security import get_current_user, require_role
 
 router = APIRouter()
@@ -300,3 +301,93 @@ def list_pharmacy_update_history(
         .all()
     )
     return rows
+
+
+# ---------- Bulk stock import (CSV / Excel) ----------
+
+MAX_UPLOAD = 2_000_000
+
+
+def _find_medicine(db: Session, name: str | None, barcode: str | None):
+    if barcode:
+        m = db.query(Medicine).filter(Medicine.barcode == barcode).first()
+        if m:
+            return m
+    if name:
+        low = name.lower()
+        m = db.query(Medicine).filter(func.lower(Medicine.name) == low).first()
+        if m:
+            return m
+        alias = (
+            db.query(MedicineAlias).filter(func.lower(MedicineAlias.alias_name) == low).first()
+        )
+        if alias:
+            return db.get(Medicine, alias.medicine_id)
+    return None
+
+
+@router.post("/{pharmacy_id}/import")
+async def import_stock(
+    pharmacy_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Upload a CSV/XLSX of your stock. Rows are matched to the catalogue by
+    barcode, then name or alias; existing listings are updated (with audit
+    history), new ones created. Unmatched or invalid rows are reported back."""
+    _get_owned_pharmacy(pharmacy_id, current_user, db)
+    data = await file.read(MAX_UPLOAD + 1)
+    if len(data) > MAX_UPLOAD:
+        raise HTTPException(status_code=413, detail="File too large (max 2 MB)")
+    try:
+        rows = parse_sheet(file.filename or "", data)
+    except SheetError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    created = updated = 0
+    problems: list[dict] = []
+    seen: set[int] = set()
+    for r in rows:
+        label = r["medicine"] or r["barcode"]
+        if r["error"]:
+            problems.append({"row": r["row"], "medicine": label, "reason": r["error"]})
+            continue
+        med = _find_medicine(db, r["medicine"], r["barcode"])
+        if not med:
+            problems.append({"row": r["row"], "medicine": label,
+                             "reason": "Not in the medicine catalogue"})
+            continue
+        if med.medicine_id in seen:
+            problems.append({"row": r["row"], "medicine": label, "reason": "Duplicate row for this medicine"})
+            continue
+        seen.add(med.medicine_id)
+
+        product = (
+            db.query(PharmacyProduct)
+            .filter(PharmacyProduct.pharmacy_id == pharmacy_id,
+                    PharmacyProduct.medicine_id == med.medicine_id)
+            .first()
+        )
+        if product is None:
+            db.add(PharmacyProduct(
+                pharmacy_id=pharmacy_id, medicine_id=med.medicine_id, price=r["price"],
+                availability_status=r["status"] or "unknown", stock_quantity=r["stock"],
+            ))
+            created += 1
+            continue
+        new_price = r["price"] if r["price"] is not None else product.price
+        new_status = r["status"] or product.availability_status
+        new_stock = r["stock"] if r["stock"] is not None else product.stock_quantity
+        db.add(PharmacyUpdate(
+            product_id=product.product_id, updated_by=current_user.user_id,
+            old_price=product.price, new_price=new_price,
+            old_status=product.availability_status, new_status=new_status,
+            old_stock=product.stock_quantity, new_stock=new_stock,
+        ))
+        product.price, product.availability_status, product.stock_quantity = new_price, new_status, new_stock
+        product.is_active = True
+        product.last_updated = datetime.utcnow()
+        updated += 1
+    db.commit()
+    return {"created": created, "updated": updated, "skipped": len(problems), "problems": problems[:200]}

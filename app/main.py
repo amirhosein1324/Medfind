@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from .database import Base, engine
-from .routers import auth, medicines, pharmacies, search, users
+from .routers import auth, medicines, pharmacies, search, users, web
 
 # NOTE: create_all() is fine for development. For production, replace this
 # with Alembic migrations (see README).
@@ -33,6 +33,7 @@ app.include_router(users.router, prefix="/api/users", tags=["Users"])
 app.include_router(medicines.router, prefix="/api/medicines", tags=["Medicines"])
 app.include_router(pharmacies.router, prefix="/api/pharmacies", tags=["Pharmacies"])
 app.include_router(search.router, prefix="/api/search", tags=["Search"])
+app.include_router(web.router, prefix="/api/web", tags=["Web discovery"])
 
 
 # Serve the web UI from the same origin as the API (no CORS, no second server):

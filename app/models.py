@@ -201,3 +201,60 @@ class SearchHistory(Base):
 
     user = relationship("User", back_populates="searches")
     medicine = relationship("Medicine", back_populates="searches")
+
+
+class WebProduct(Base):
+    """A medicine product found on a third-party website by the crawler (or by
+    Google discovery). Not a MedFind pharmacy listing: nobody here confirmed it.
+    Prices are in Toman (IRT) for Iranian sites."""
+
+    __tablename__ = "web_products"
+
+    product_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    url: Mapped[str] = mapped_column(String(1000), unique=True)
+    source_domain: Mapped[str] = mapped_column(String(255), index=True)
+    title: Mapped[str] = mapped_column(String(500))          # as published (usually Persian)
+    title_en: Mapped[str | None] = mapped_column(String(300), index=True)
+    generic_en: Mapped[str | None] = mapped_column(String(150), index=True)
+    price: Mapped[Decimal | None] = mapped_column(Numeric(14, 2))
+    currency: Mapped[str | None] = mapped_column(String(10))
+    availability: Mapped[str] = mapped_column(String(30), default="unknown")
+    image_url: Mapped[str | None] = mapped_column(String(1000))
+    first_seen: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    fetched_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+
+
+class CrawlSource(Base):
+    """One crawled website and how its last run went (shown to admins)."""
+
+    __tablename__ = "crawl_sources"
+
+    domain: Mapped[str] = mapped_column(String(255), primary_key=True)
+    status: Mapped[str] = mapped_column(String(40), default="pending")
+    detail: Mapped[str | None] = mapped_column(Text)
+    urls_found: Mapped[int] = mapped_column(Integer, default=0)
+    products_total: Mapped[int] = mapped_column(Integer, default=0)
+    last_run: Mapped[datetime | None] = mapped_column(DateTime)
+
+
+class ExternalQuery(Base):
+    """Remembers when a query was last sent to the web, so we cache it and
+    stay inside the Google API quota."""
+
+    __tablename__ = "external_queries"
+
+    query: Mapped[str] = mapped_column(String(255), primary_key=True)
+    fetched_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    result_count: Mapped[int] = mapped_column(Integer, default=0)
+
+
+class CrawlPage(Base):
+    """One product page the crawler has visited (so runs are incremental)."""
+
+    __tablename__ = "crawl_pages"
+
+    url: Mapped[str] = mapped_column(String(1000), primary_key=True)
+    source: Mapped[str] = mapped_column(String(100), index=True)
+    last_crawled: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    status: Mapped[str] = mapped_column(String(30), default="ok")  # ok | no_product | blocked | error
+    product_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
