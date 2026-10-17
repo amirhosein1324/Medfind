@@ -195,3 +195,4 @@ input[type="range"]:disabled { opacity: 0.45; }
 .pcard__price { margin-top: 0.3rem; } .pcard__price strong { font-family: var(--font-display); font-size: 1.15rem; }
 .pcard__meta { display: flex; justify-content: space-between; gap: 0.5rem; font-size: var(--fs-sm); color: var(--muted); }
 .pcard__stock { color: var(--ok-fg); font-weight: 600; } .pcard__stock[data-none="true"] { color: var(--bad-fg); }
+.pcard__stock[data-unk="true"] { color: var(--muted); font-weight: 500; }

@@ -107,3 +107,65 @@ def test_grouping_product_page_and_history(client):
     page = client.get("/api/web/product", params={"key": g["key"]}).json()
     assert len(page["offers"]) == 2 and page["history"] and page["history"][-1]["min_price"] == 11000
     assert client.get("/api/web/product", params={"key": "nothing-here"}).status_code == 404
+
+
+def test_link_discovery_when_sitemap_has_no_products():
+    db = TestingSessionLocal()
+    try:
+        home = '<a href="/store/">Store</a><a href="/product/77/para">p</a><a href="https://other.ir/product/1">x</a>'
+        pages = {"https://links.ir/sitemap.xml": "<urlset><url><loc>https://links.ir/blog/x</loc></url></urlset>",
+                 "https://links.ir/": home, "https://links.ir/store/": '<a href="/product/78/ibu">q</a>',
+                 "https://links.ir/product/77/para": ld("قرص پاراستامول ۵۰۰ میلی گرم", "100000", "IRR"),
+                 "https://links.ir/product/78/ibu": ld("قرص ایبوپروفن ۴۰۰ میلی گرم", "90000", "IRR")}
+        r = crawler.crawl_source(db, "links.ir", 10, FakeFetcher(pages, "User-agent: *\nAllow: /\nSitemap: https://links.ir/sitemap.xml"))
+        assert r["status"] == "ok" and r["saved"] == 2
+    finally:
+        db.close()
+
+
+def test_unreachable_reports_reason():
+    db = TestingSessionLocal()
+    try:
+        f = FakeFetcher({}, None)
+        f.errors["https://x.ir"] = "ConnectError: boom"
+        r = crawler.crawl_source(db, "x.ir", 5, f)
+        assert r["status"] == "unreachable"
+        from app.models import CrawlSource
+        assert "ConnectError" in db.get(CrawlSource, "x.ir").detail
+    finally:
+        db.close()
+
+
+def test_pricelist_import_persian_headers(client):
+    from app.ingest.pricelist import import_pricelist
+    csv_ = "نام دارو,نام ژنریک,قیمت (ریال)\nقرص ۵۰۰ میلی گرم,پاراستامول,\"۱۲۵,۰۰۰\"\nخالی,,\n".encode("utf-8-sig")
+    db = TestingSessionLocal()
+    try:
+        r = import_pricelist(db, "list.csv", csv_, "fda.example")
+        assert r["saved"] == 1 and r["skipped"] == 1 and r["currency"] == "IRR"
+    finally:
+        db.close()
+    g = next(x for x in client.get("/api/web/search", params={"q": "paracetamol"}).json()["groups"] if x["generic"] == "Paracetamol")
+    assert float(g["min_price"]) == 12500 and g["offers"][0]["availability"] == "unknown"
+
+
+def test_admin_import_endpoint_requires_admin(client):
+    assert client.post("/api/web/import", files={"file": ("a.csv", b"x")}, data={"source": "s"}).status_code == 401
+
+
+def test_nadac_import_real_format(client):
+    from app.ingest.nadac import import_nadac
+    lines = [
+        "NDC Description,NDC,NADAC_Per_Unit,Effective_Date,Pricing_Unit,Pharmacy_Type_Indicator,OTC,Explanation_Code,Classification_for_Rate_Setting,Corresponding_Generic_Drug_NADAC_Per_Unit,Corresponding_Generic_Drug_Effective_Date,As_of_Date",
+        "ATORVASTATIN 10 MG TABLET,00093505698,0.02345,01/01/2026,EA,C/I,N,1,G,,,01/07/2026",
+        "ATORVASTATIN 10 MG TABLET,00093505698,0.02100,01/08/2026,EA,C/I,N,1,G,,,01/14/2026",
+        "BAD ROW,,x,notadate,EA,C/I,N,1,G,,,",
+    ]
+    db = TestingSessionLocal()
+    try:
+        r = import_nadac(db, lines)
+        assert r["products"] == 1 and r["bad_rows"] == 1
+    finally:
+        db.close()
+    g = next(x for x in client.get("/api/web/search", params={"q": "atorvastatin"}).json()["groups"] if x["offers"])
+    assert float(g["min_price"]) == 0.021 and g["currency"] == "USD"

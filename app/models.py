@@ -216,7 +216,7 @@ class WebProduct(Base):
     title: Mapped[str] = mapped_column(String(500))          # as published (usually Persian)
     title_en: Mapped[str | None] = mapped_column(String(300), index=True)
     generic_en: Mapped[str | None] = mapped_column(String(150), index=True)
-    price: Mapped[Decimal | None] = mapped_column(Numeric(14, 2))
+    price: Mapped[Decimal | None] = mapped_column(Numeric(14, 4))
     currency: Mapped[str | None] = mapped_column(String(10))
     availability: Mapped[str] = mapped_column(String(30), default="unknown")
     image_url: Mapped[str | None] = mapped_column(String(1000))
@@ -267,5 +267,5 @@ class PricePoint(Base):
 
     point_id: Mapped[int] = mapped_column(Integer, primary_key=True)
     url: Mapped[str] = mapped_column(String(1000), index=True)
-    price: Mapped[Decimal] = mapped_column(Numeric(14, 2))
+    price: Mapped[Decimal] = mapped_column(Numeric(14, 4))
     seen_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)

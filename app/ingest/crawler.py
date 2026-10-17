@@ -48,6 +48,36 @@ def discover_urls(f: Fetcher, base: str) -> list[str]:
     return hinted or urls
 
 
+HREF = re.compile(r'href=["\']([^"\'#]+)["\']', re.I)
+LISTING_HINT = re.compile(r"categor|/cat/|/c/|/shop|/store|/products?/?$|دسته|داروخانه", re.I)
+SEEDS = ["/", "/store/", "/shop/", "/products/"]
+
+
+def discover_by_links(f: Fetcher, base: str, max_listing_pages: int = 25) -> list[str]:
+    """Fallback when the sitemap has no product pages: read the homepage and
+    listing pages and follow links that look like products (same site only)."""
+    from urllib.parse import urljoin, urlparse
+    host = urlparse(base).netloc
+    queue, seen, products = [base + p for p in SEEDS], set(), []
+    while queue and len(seen) < max_listing_pages:
+        page = queue.pop(0)
+        if page in seen:
+            continue
+        seen.add(page)
+        html = f.get(page)
+        if not html:
+            continue
+        for href in HREF.findall(html):
+            u = urljoin(page, href.strip()).split("#")[0]
+            if urlparse(u).netloc != host:
+                continue
+            if PRODUCT_HINT.search(u) and not LISTING_HINT.search(u.rsplit("/", 1)[-1] or "x"):
+                products.append(u)
+            elif LISTING_HINT.search(u) and u not in seen and len(queue) < 100:
+                queue.append(u)
+    return list(dict.fromkeys(products))
+
+
 def upsert_product(db: Session, url: str, domain: str, p: dict) -> WebProduct:
     a = analyze_title(p["title"])
     price, cur = to_toman(p["price"], p.get("currency"))
@@ -87,11 +117,14 @@ def crawl_source(db: Session, domain: str, max_pages: int = 300, fetcher: Fetche
 
     rp = f.robots(base)
     if rp is None:
-        return finish("unreachable", "Could not read robots.txt (site down, blocked, or not reachable from here)")
+        why = f.errors.get(base, "unknown error")
+        return finish("unreachable", f"Could not read robots.txt: {why}")
     if not rp.can_fetch("MedFindBot", base + "/"):
         return finish("blocked_by_robots", "robots.txt does not allow crawling")
 
     urls = discover_urls(f, base)
+    if not any(PRODUCT_HINT.search(u) for u in urls):
+        urls = discover_by_links(f, base) or urls
     result["urls"] = len(urls)
     if not urls:
         return finish("no_sitemap", "No sitemap with URLs found")

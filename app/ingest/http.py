@@ -27,6 +27,7 @@ class Fetcher:
     def __init__(self, delay: float = 1.0):
         self.delay = delay
         self._robots: dict[str, RobotFileParser | None] = {}
+        self.errors: dict[str, str] = {}
         self._last: dict[str, float] = {}
 
     def robots(self, base: str) -> RobotFileParser | None:
@@ -37,12 +38,14 @@ class Fetcher:
                 r = httpx.get(base + "/robots.txt", timeout=8, headers={"User-Agent": USER_AGENT}, follow_redirects=True)
                 if r.status_code >= 500:
                     rp = None
+                    self.errors[base] = f"robots.txt returned HTTP {r.status_code}"
                 elif r.status_code >= 400:
                     rp.parse([])  # no robots.txt: everything allowed
                 else:
                     rp.parse(r.text.splitlines())
-            except httpx.HTTPError:
+            except httpx.HTTPError as e:
                 rp = None
+                self.errors[base] = f"{type(e).__name__}: {str(e)[:160]}"
             self._robots[base] = rp
         return self._robots[base]
 

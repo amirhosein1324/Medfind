@@ -108,7 +108,19 @@
       list.map((s) => `<tr><td class="name">${esc(s.domain)}<div class="sub">${esc(s.detail || "")}</div></td>
         <td><span class="pill" data-t="${s.status === "ok" ? "ok" : s.status === "pending" ? "" : "warn"}">${esc(SRC_NOTE[s.status] || s.status)}</span></td>
         <td class="num">${s.products_total}</td><td>${s.last_run ? esc(ago(s.last_run)) : "–"}</td>
-        <td><div class="acts"><button class="btn btn--secondary btn--sm" data-crawl="${esc(s.domain)}">${icon("refresh")}Crawl now</button></div></td></tr>`).join("") + `</tbody></table></div>`;
+        <td><div class="acts"><button class="btn btn--secondary btn--sm" data-crawl="${esc(s.domain)}">${icon("refresh")}Crawl now</button></div></td></tr>`).join("") + `</tbody></table></div>
+      <h2 class="section-title" style="margin-top:var(--s-6)">Import a price list</h2>
+      <form class="panel" id="plForm"><p class="hint" style="margin-bottom:var(--s-3)">Upload a published price list (CSV or Excel, English or Persian headers such as <b>نام دارو</b> and <b>قیمت</b>), for example an official consumer price list.</p>
+        <div class="field-row field-row--3">
+          <div class="field"><label class="label" for="plFile">File</label><input class="input" id="plFile" type="file" accept=".csv,.xlsx,.txt" required></div>
+          <div class="field"><label class="label" for="plSrc">Source name</label><input class="input" id="plSrc" placeholder="fda.gov.ir" required></div>
+          <div class="field"><label class="label" for="plCur">Prices are in</label><select class="select" id="plCur"><option value="">Auto (Rial unless header says Toman)</option><option value="IRR">Rial</option><option value="IRT">Toman</option></select></div>
+        </div><p class="form-error" id="plErr" role="alert"></p><button class="btn btn--primary" type="submit">Import</button></form>`;
+    $("#plForm").onsubmit = async (e) => {
+      e.preventDefault(); $("#plErr").textContent = "";
+      try { const r = await api.importPrices($("#plFile").files[0], $("#plSrc").value.trim(), $("#plCur").value); MF.toast(`${r.saved} prices imported, ${r.skipped} skipped`); sources(); }
+      catch (x) { $("#plErr").textContent = x.message; }
+    };
   }
 
   /* ---------- users ---------- */

@@ -281,6 +281,7 @@
 
     webProduct: (key) => request("/api/web/product" + qs({ key }), { auth: false }),
     webSuggest: (q, signal) => request("/api/web/suggest" + qs({ q }), { signal, auth: false }),
+    importPrices: (file, source, currency) => { const f = new FormData(); f.append("file", file); f.append("source", source); if (currency) f.append("currency", currency); return request("/api/web/import", { method: "POST", body: f, form: true }); },
     webSources: () => request("/api/web/sources"),
     crawlNow: (d) => request("/api/web/crawl/" + encodeURIComponent(d), { method: "POST" }),
     webSearch: (q, signal) => request("/api/web/search" + qs({ q }), { signal, auth: false }),

@@ -42,6 +42,8 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg2://medfind:medfind@db:5432/medfind
       CRAWL_SOURCES: ${CRAWL_SOURCES:-}
+      HTTPS_PROXY: ${CRAWL_PROXY:-}
+      HTTP_PROXY: ${CRAWL_PROXY:-}
     command: ["python", "-m", "scripts.crawl", "--loop", "--every", "6"]
 
   # Database-only stress test. Not started by `docker compose up`;

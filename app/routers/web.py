@@ -1,13 +1,15 @@
 import logging
 
 import httpx
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from ..database import SessionLocal, get_db
 from ..ingest import google, service
 from ..ingest.crawler import crawl_source
+from ..ingest.pricelist import import_pricelist
+from ..ingest.sheet import SheetError
 from ..ingest.sources import get_sources
 from ..models import CrawlSource, User, WebProduct
 from ..schemas import CrawlSourceResponse, ProductPageResponse, WebProductResponse, WebSearchResponse
@@ -99,3 +101,23 @@ def crawl_now(domain: str, background: BackgroundTasks, _admin: User = Depends(r
         raise HTTPException(status_code=404, detail="Not a configured source")
     background.add_task(_crawl_in_background, domain, 150)
     return {"started": domain}
+
+
+@router.post("/import")
+async def import_prices(
+    file: UploadFile = File(...),
+    source: str = Form(...),
+    currency: str | None = Form(None),
+    db: Session = Depends(get_db),
+    _admin: User = Depends(require_role("admin")),
+):
+    """Admin: load a published price list (CSV/XLSX) as web products."""
+    data = await file.read(10_000_001)
+    if len(data) > 10_000_000:
+        raise HTTPException(status_code=413, detail="File too large (max 10 MB)")
+    if currency not in (None, "", "IRR", "IRT"):
+        raise HTTPException(status_code=400, detail="currency must be IRR or IRT")
+    try:
+        return import_pricelist(db, file.filename or "", data, source, currency or None)
+    except SheetError as e:
+        raise HTTPException(status_code=400, detail=str(e))

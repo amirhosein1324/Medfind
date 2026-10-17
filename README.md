@@ -270,3 +270,17 @@ A crawler reads product pages of Iranian online pharmacies, stores name, price (
 
 ## Torob-style comparison
 Search shows one card per medicine ("from X Toman, N shops, M in stock"), grouped across shops by generic + strength + form. A card opens `product.html?k=...`: every shop's offer cheapest first with a "Go to shop" button, lowest/average price, and a price-history chart built from the crawler's re-checks (`price_points`). API: `GET /api/web/search?q=` (grouped, `sort=price|relevance`) and `GET /api/web/product?key=`.
+
+## Diagnosing a site that won't crawl
+    docker compose exec crawler python -m scripts.check_sites            # all configured sites
+    docker compose exec crawler python -m scripts.check_sites banidaroo.com
+Compares robots.txt and home page as MedFindBot vs a normal browser: network trouble (DNS/TLS/timeout) looks the same for both; a bot block (403, connection reset) only hits the bot.
+
+## Real English data (no fake data)
+
+```
+docker compose exec api python -m scripts.import_nadac
+```
+Downloads the newest CMS **NADAC** file (public US data, ~25k drug products, real USD prices with weekly history).
+These are pharmacy *acquisition* costs per unit (tablet / mL / g), not shelf prices. Use `--file nadac.csv` if you
+download the CSV yourself from data.medicaid.gov. Do not run `seed_demo` on a real installation.

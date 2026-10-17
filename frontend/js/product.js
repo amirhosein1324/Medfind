@@ -4,7 +4,7 @@
   MF.renderNav("search");
   const root = $("#main");
   const key = new URLSearchParams(location.search).get("k");
-  const money = (v, cur) => v == null ? "–" : cur === "IRT" ? Math.round(Number(v)).toLocaleString("en-US") + " Toman" : Number(v).toFixed(2) + " " + (cur || "");
+  const money = (v, cur) => v == null ? "–" : cur === "IRT" ? Math.round(Number(v)).toLocaleString("en-US") + " Toman" : (v < 1 ? Number(v).toFixed(4).replace(/0+$/, "").replace(/\.$/, ".00") : Number(v).toFixed(2)) + " " + (cur || "");
   const short = (v) => Number(v) >= 1e6 ? (Number(v) / 1e6).toFixed(2).replace(/\.?0+$/, "") + "M" : Number(v) >= 1e3 ? Math.round(Number(v) / 1e3) + "k" : String(Math.round(Number(v)));
 
   function chart(h, cur) {

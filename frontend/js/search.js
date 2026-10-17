@@ -201,11 +201,12 @@
 
   /* ------------------------------------------------ results from other websites */
   const toman = (v) => Math.round(Number(v)).toLocaleString("en-US");
-  const fmtPrice = (v, cur) => v == null ? "" : cur === "IRT" ? toman(v) + " Toman" : Number(v).toFixed(2) + " " + (cur || "");
+  const fmtPrice = (v, cur) => v == null ? "" : cur === "IRT" ? toman(v) + " Toman" : (v < 1 ? Number(v).toFixed(4).replace(/0+$/, "").replace(/\.$/, ".00") : Number(v).toFixed(2)) + " " + (cur || "");
   let webGroups = [], webSort = "relevance";
 
   function groupCard(g) {
-    const none = g.available === 0;
+    const unknown = g.offers.every((o) => o.availability === "unknown");
+    const none = g.available === 0 && !unknown;
     return `<a class="pcard" href="product.html?k=${encodeURIComponent(g.key)}">
       <div class="pcard__img">${g.image_url ? `<img src="${esc(MF.safeUrl(g.image_url) || "")}" alt="" loading="lazy" referrerpolicy="no-referrer">` : icon("pill")}</div>
       <div class="pcard__body">
@@ -213,7 +214,7 @@
         ${g.title_fa ? `<div class="pcard__fa" dir="auto">${esc(g.title_fa)}</div>` : ""}
         <div class="pcard__price">${g.min_price != null ? `<span class="hint">${none ? "Last price" : "From"}</span> <strong class="num">${esc(fmtPrice(g.min_price, g.currency))}</strong>` : '<span class="hint">Price not listed</span>'}</div>
         <div class="pcard__meta"><span>${g.shops} shop${g.shops === 1 ? "" : "s"}</span>
-          <span class="pcard__stock" data-none="${none}">${none ? "Out of stock" : g.available + " in stock"}</span></div>
+          <span class="pcard__stock" data-none="${none}" data-unk="${unknown}">${none ? "Out of stock" : unknown ? "Stock unknown" : g.available + " in stock"}</span></div>
       </div></a>`;
   }
 
