@@ -1,12 +1,12 @@
 """Sitemap-driven crawler: discover product pages -> fetch -> extract -> store."""
 import logging
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 from urllib.parse import urlparse
 
 from sqlalchemy.orm import Session
 
-from ..models import CrawlSource, WebProduct
+from ..models import CrawlSource, PricePoint, WebProduct
 from .extract import extract_products
 from .http import Fetcher
 from .persian import analyze_title, normalize, to_toman
@@ -61,6 +61,11 @@ def upsert_product(db: Session, url: str, domain: str, p: dict) -> WebProduct:
     row.image_url = p.get("image_url")
     row.fetched_at = datetime.utcnow()
     db.add(row)
+    if price is not None:
+        last = (db.query(PricePoint).filter(PricePoint.url == row.url)
+                .order_by(PricePoint.seen_at.desc()).first())
+        if last is None or float(last.price) != float(price) or last.seen_at < datetime.utcnow() - timedelta(hours=20):
+            db.add(PricePoint(url=row.url, price=price))
     return row
 
 

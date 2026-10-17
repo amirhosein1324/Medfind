@@ -92,3 +92,18 @@ def test_web_search_endpoint_and_admin_sources(client, monkeypatch):
     assert r["enabled"] and r["items"][0]["source_domain"] == "shop.ir" and r["items"][0]["currency"] == "IRT"
     assert client.get("/api/web/search", params={"q": "پاراستامول"}).json()["items"]
     assert client.get("/api/web/sources").status_code == 401
+
+
+def test_grouping_product_page_and_history(client):
+    db = TestingSessionLocal()
+    for dom, price in (("shop-a.ir", "125000"), ("shop-b.ir", "110000")):
+        pages = {f"https://{dom}/sm.xml": f"<urlset><url><loc>https://{dom}/product/1</loc></url></urlset>",
+                 f"https://{dom}/product/1": ld("قرص پاراستامول ۵۰۰ میلی گرم", price, "IRR")}
+        crawler.crawl_source(db, dom, 5, FakeFetcher(pages, f"User-agent: *\nAllow: /\nSitemap: https://{dom}/sm.xml"))
+    db.close()
+    r = client.get("/api/web/search", params={"q": "paracetamol"}).json()
+    g = next(x for x in r["groups"] if x["generic"] == "Paracetamol")
+    assert g["shops"] == 2 and float(g["min_price"]) == 11000 and g["offers"][0]["shop"] == "shop-b.ir"
+    page = client.get("/api/web/product", params={"key": g["key"]}).json()
+    assert len(page["offers"]) == 2 and page["history"] and page["history"][-1]["min_price"] == 11000
+    assert client.get("/api/web/product", params={"key": "nothing-here"}).status_code == 404

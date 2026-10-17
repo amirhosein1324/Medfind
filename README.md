@@ -267,3 +267,6 @@ A crawler reads product pages of Iranian online pharmacies, stores name, price (
 * Pages are read through schema.org Product JSON-LD, Torob-style `product_price` meta tags, or Open Graph price tags.
 * Admin > Data sources shows, per site, whether it worked: Working / Site forbids crawlers / Not reachable / No sitemap / No price data. Fix by removing sites that don't work or adding ones that do.
 * Do NOT run `scripts.seed_demo` in production: it creates fake sample pharmacies for UI demos only.
+
+## Torob-style comparison
+Search shows one card per medicine ("from X Toman, N shops, M in stock"), grouped across shops by generic + strength + form. A card opens `product.html?k=...`: every shop's offer cheapest first with a "Go to shop" button, lowest/average price, and a price-history chart built from the crawler's re-checks (`price_points`). API: `GET /api/web/search?q=` (grouped, `sort=price|relevance`) and `GET /api/web/product?key=`.

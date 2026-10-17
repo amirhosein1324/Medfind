@@ -200,33 +200,58 @@
   }
 
   /* ------------------------------------------------ results from other websites */
-  const fmtPrice = (i) => i.price == null ? "" :
-    i.currency === "IRT" ? Math.round(Number(i.price)).toLocaleString("en-US") + " Toman"
-      : Number(i.price).toFixed(2) + " " + (i.currency || "");
+  const toman = (v) => Math.round(Number(v)).toLocaleString("en-US");
+  const fmtPrice = (v, cur) => v == null ? "" : cur === "IRT" ? toman(v) + " Toman" : Number(v).toFixed(2) + " " + (cur || "");
+  let webGroups = [], webSort = "relevance";
+
+  function groupCard(g) {
+    const none = g.available === 0;
+    return `<a class="pcard" href="product.html?k=${encodeURIComponent(g.key)}">
+      <div class="pcard__img">${g.image_url ? `<img src="${esc(MF.safeUrl(g.image_url) || "")}" alt="" loading="lazy" referrerpolicy="no-referrer">` : icon("pill")}</div>
+      <div class="pcard__body">
+        <h3 class="pcard__name">${esc(g.name)}</h3>
+        ${g.title_fa ? `<div class="pcard__fa" dir="auto">${esc(g.title_fa)}</div>` : ""}
+        <div class="pcard__price">${g.min_price != null ? `<span class="hint">${none ? "Last price" : "From"}</span> <strong class="num">${esc(fmtPrice(g.min_price, g.currency))}</strong>` : '<span class="hint">Price not listed</span>'}</div>
+        <div class="pcard__meta"><span>${g.shops} shop${g.shops === 1 ? "" : "s"}</span>
+          <span class="pcard__stock" data-none="${none}">${none ? "Out of stock" : g.available + " in stock"}</span></div>
+      </div></a>`;
+  }
+
+  function paintGroups() {
+    const host = $("#webGrid"); if (!host) return;
+    const list = webGroups.slice().sort(webSort === "price"
+      ? (a, b) => (a.min_price == null) - (b.min_price == null) || a.min_price - b.min_price
+      : webSort === "shops" ? (a, b) => b.shops - a.shops : () => 0);
+    host.innerHTML = list.map(groupCard).join("");
+    $$("[data-wsort]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.wsort === webSort)));
+  }
 
   async function loadWeb(q, my) {
     const host = $("#webResults");
     host.hidden = true;
     if (state.demo) return;
     host.hidden = false;
-    host.innerHTML = `<h2 class="web__title" id="webTitle">Online pharmacies</h2><div class="skeleton skel-line" style="width:50%"></div>`;
+    host.innerHTML = `<h2 class="web__title" id="webTitle">Medicines found online</h2><div class="pgrid">${[1, 2, 3].map(() => '<div class="skeleton" style="height:210px;border-radius:14px"></div>').join("")}</div>`;
     try {
       const res = await api.webSearch(q);
       if (my !== state.seq) return;
-      if (!res.enabled || !res.items.length) { host.hidden = true; return; }
+      if (!res.enabled || !res.groups.length) { host.hidden = true; return; }
+      webGroups = res.groups; webSort = "relevance";
       const sites = new Set(res.items.map((i) => i.source_domain)).size;
       if (!state.raw.length) {
         $("#resultList").innerHTML = "";
         $("#resultsTitle").textContent = `Results for “${q}”`;
-        $("#resultsSub").textContent = `${res.items.length} products from ${sites} online pharmac${sites === 1 ? "y" : "ies"}`;
+        $("#resultsSub").textContent = `${webGroups.length} medicine${webGroups.length === 1 ? "" : "s"} from ${sites} online pharmac${sites === 1 ? "y" : "ies"}`;
       }
-      host.innerHTML = `<h2 class="web__title" id="webTitle">Online pharmacies</h2>
-        <p class="hint">Collected automatically from pharmacy websites. Prices and stock may be out of date, so confirm on the site.</p>
-        <ul class="web__list">${res.items.map((i) => `<li class="web__item">
-          <div class="web__main"><a href="${esc(MF.safeUrl(i.url) || "#")}" target="_blank" rel="noopener nofollow">${esc(i.title_en || i.title)}</a>
-          ${i.title_en && i.title !== i.title_en ? `<div class="web__fa" dir="auto">${esc(i.title)}</div>` : ""}
-          <div class="hint">${esc(i.source_domain)} · checked ${esc(ago(i.fetched_at))}</div></div>
-          <div class="web__buy">${i.price != null ? `<strong class="num">${esc(fmtPrice(i))}</strong>` : ""}${statusHTML(i.availability)}</div></li>`).join("")}</ul>`;
+      host.innerHTML = `<div class="web__head"><div><h2 class="web__title" id="webTitle">Medicines found online</h2>
+        <p class="hint">Prices are collected automatically from pharmacy websites and may be out of date. Open a medicine to compare shops.</p></div>
+        <div class="web__sort" role="group" aria-label="Sort online results">
+          <button class="chip" type="button" data-wsort="relevance" aria-pressed="true">Best match</button>
+          <button class="chip" type="button" data-wsort="price" aria-pressed="false">Cheapest</button>
+          <button class="chip" type="button" data-wsort="shops" aria-pressed="false">Most shops</button></div></div>
+        <div class="pgrid" id="webGrid"></div>`;
+      paintGroups();
+      $$("[data-wsort]", host).forEach((b) => b.addEventListener("click", () => { webSort = b.dataset.wsort; paintGroups(); }));
     } catch (e) { if (my === state.seq) host.hidden = true; }
   }
 

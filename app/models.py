@@ -258,3 +258,14 @@ class CrawlPage(Base):
     last_crawled: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     status: Mapped[str] = mapped_column(String(30), default="ok")  # ok | no_product | blocked | error
     product_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+
+class PricePoint(Base):
+    """One observed price of a web product on one day: powers the price chart."""
+
+    __tablename__ = "price_points"
+
+    point_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    url: Mapped[str] = mapped_column(String(1000), index=True)
+    price: Mapped[Decimal] = mapped_column(Numeric(14, 2))
+    seen_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)

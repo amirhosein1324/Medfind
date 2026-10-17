@@ -212,9 +212,43 @@ class WebProductResponse(BaseModel):
     fetched_at: datetime
 
 
+class OfferResponse(BaseModel):
+    shop: str
+    title: str
+    price: Decimal | None
+    currency: str | None
+    availability: str
+    url: str
+    fetched_at: datetime
+
+
+class ProductGroupResponse(BaseModel):
+    key: str
+    name: str
+    title_fa: str | None = None
+    generic: str | None = None
+    image_url: str | None = None
+    min_price: Decimal | None = None
+    max_price: Decimal | None = None
+    currency: str | None = None
+    shops: int
+    available: int
+    offers: list[OfferResponse]
+
+
 class WebSearchResponse(BaseModel):
     enabled: bool
     items: list[WebProductResponse]
+    groups: list[ProductGroupResponse] = []
+
+
+class PricePointResponse(BaseModel):
+    date: str
+    min_price: float
+
+
+class ProductPageResponse(ProductGroupResponse):
+    history: list[PricePointResponse] = []
 
 
 class CrawlSourceResponse(BaseModel):

@@ -279,6 +279,7 @@
     categories: () => request("/api/medicines/categories"),
     createCategory: (b) => post("/api/medicines/categories", b),
 
+    webProduct: (key) => request("/api/web/product" + qs({ key }), { auth: false }),
     webSuggest: (q, signal) => request("/api/web/suggest" + qs({ q }), { signal, auth: false }),
     webSources: () => request("/api/web/sources"),
     crawlNow: (d) => request("/api/web/crawl/" + encodeURIComponent(d), { method: "POST" }),

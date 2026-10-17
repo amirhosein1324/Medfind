@@ -177,3 +177,21 @@ input[type="range"]:disabled { opacity: 0.45; }
 
 .web__main { min-width: 0; flex: 1; }
 .web__fa { color: var(--ink-2); font-size: var(--fs-sm); margin-top: 0.1rem; }
+
+/* ---- online results as product cards (Torob-style) ---- */
+.results__main { display: flex; flex-direction: column; }
+.results__head { order: 0; } .products { order: 1; } .web { order: 2; } .result-list { order: 3; }
+.web__head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: var(--s-3); margin-bottom: var(--s-4); }
+.web__sort { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.web { margin-top: 0; padding-top: 0; border-top: 0; margin-bottom: var(--s-6); }
+.pgrid { display: grid; gap: var(--s-3); grid-template-columns: repeat(auto-fill, minmax(min(100%, 210px), 1fr)); }
+.pcard { display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); overflow: hidden; text-decoration: none; color: var(--ink); transition: border-color 140ms, transform 140ms, box-shadow 140ms; }
+.pcard:hover { border-color: var(--brand); transform: translateY(-2px); box-shadow: var(--shadow-1); color: var(--ink); }
+.pcard__img { display: grid; place-items: center; height: 120px; background: var(--surface-2); color: var(--muted); font-size: 2.6rem; }
+.pcard__img img { width: 100%; height: 100%; object-fit: contain; background: #fff; }
+.pcard__body { display: grid; gap: 0.3rem; padding: 0.85rem 1rem 1rem; }
+.pcard__name { font-size: var(--fs-md); line-height: 1.3; }
+.pcard__fa { color: var(--ink-2); font-size: var(--fs-sm); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.pcard__price { margin-top: 0.3rem; } .pcard__price strong { font-family: var(--font-display); font-size: 1.15rem; }
+.pcard__meta { display: flex; justify-content: space-between; gap: 0.5rem; font-size: var(--fs-sm); color: var(--muted); }
+.pcard__stock { color: var(--ok-fg); font-weight: 600; } .pcard__stock[data-none="true"] { color: var(--bad-fg); }

@@ -10,7 +10,7 @@ from ..ingest import google, service
 from ..ingest.crawler import crawl_source
 from ..ingest.sources import get_sources
 from ..models import CrawlSource, User, WebProduct
-from ..schemas import CrawlSourceResponse, WebProductResponse, WebSearchResponse
+from ..schemas import CrawlSourceResponse, ProductPageResponse, WebProductResponse, WebSearchResponse
 from ..security import require_role
 
 router = APIRouter()
@@ -18,7 +18,7 @@ log = logging.getLogger("medfind.web")
 
 
 @router.get("/search", response_model=WebSearchResponse)
-def web_search(q: str, db: Session = Depends(get_db)):
+def web_search(q: str, sort: str = "relevance", db: Session = Depends(get_db)):
     """Medicine products found on Iranian online pharmacies by the crawler,
     searchable in English or Persian. NOT confirmed by a MedFind pharmacy."""
     key = service.norm_query(q)
@@ -33,7 +33,21 @@ def web_search(q: str, db: Session = Depends(get_db)):
             rows = service.search_local(db, key)
         except httpx.HTTPError as e:
             log.warning("google discovery failed: %s", e)
-    return WebSearchResponse(enabled=True, items=[WebProductResponse.model_validate(r) for r in rows])
+    return WebSearchResponse(
+        enabled=True,
+        items=[WebProductResponse.model_validate(r) for r in rows],
+        groups=service.search_groups(db, key, sort),
+    )
+
+
+@router.get("/product", response_model=ProductPageResponse)
+def web_product(key: str, db: Session = Depends(get_db)):
+    """One medicine with every shop's offer (cheapest first) and its price history."""
+    g = service.get_group(db, key)
+    if not g:
+        raise HTTPException(status_code=404, detail="Product not found")
+    g["history"] = service.price_history(db, [o["url"] for o in g["offers"]])
+    return g
 
 
 @router.get("/suggest")
