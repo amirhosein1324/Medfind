@@ -9,7 +9,7 @@ features the proposal calls out as needed for production.
 
 | English (LTR) | Persian (RTL) |
 |:---:|:---:|
-| ![MedFind search results in English](docs/screenshots/search-en.png) | ![MedFind search results in Persian](docs/screenshots/search-fa.png) |
+| ![MedFind search results in English](s_en_search.png) | ![MedFind search results in Persian](s_fa_search.png) |
 
 The screenshots show sample data. The language button (**فارسی / English**) in the top bar switches the whole public site between English and Persian with right-to-left layout.
 
