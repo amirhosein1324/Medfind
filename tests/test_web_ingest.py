@@ -169,3 +169,17 @@ def test_nadac_import_real_format(client):
         db.close()
     g = next(x for x in client.get("/api/web/search", params={"q": "atorvastatin"}).json()["groups"] if x["offers"])
     assert float(g["min_price"]) == 0.021 and g["currency"] == "USD"
+
+
+def test_nadac_header_variants(client):
+    from app.ingest.nadac import import_nadac
+    lines = ["NDC Description,NDC,NADAC Per Unit,Effective Date,Pricing Unit,OTC",
+             "METFORMIN 500 MG TABLET,00093104801,$0.01234,2026-02-11,EA,N"]
+    db = TestingSessionLocal()
+    try:
+        assert import_nadac(db, lines)["products"] == 1
+        import pytest
+        with pytest.raises(ValueError):
+            import_nadac(db, ["a,b", "1,2"])
+    finally:
+        db.close()

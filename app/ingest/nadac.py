@@ -5,6 +5,8 @@ Public weekly data from data.medicaid.gov: what US pharmacies pay per unit
 acquisition cost, not a shelf price, and the app says so on the card."""
 import csv
 import io
+import re
+import re
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
 
@@ -17,22 +19,33 @@ SOURCE = "medicaid.gov (NADAC)"
 UNIT_WORD = {"EA": "unit", "ML": "mL", "GM": "g"}
 
 
-def _row(r: dict) -> dict | None:
-    r = {(k or "").strip().lower(): (v or "").strip() for k, v in r.items()}
-    ndc, desc = r.get("ndc"), r.get("ndc description")
-    try:
-        price = Decimal(r.get("nadac_per_unit", ""))
-        when = datetime.strptime((r.get("effective_date") or "")[:10], "%m/%d/%Y")
-    except (InvalidOperation, ValueError):
+def _key(k) -> str:
+    return re.sub(r"[^a-z0-9]+", "_", (k or "").strip().lower()).strip("_")
+
+
+def _date(v: str):
+    v = (v or "").strip()[:10]
+    for f in ("%m/%d/%Y", "%Y-%m-%d", "%m-%d-%Y"):
         try:
-            when = datetime.strptime((r.get("effective_date") or "")[:10], "%Y-%m-%d")
+            return datetime.strptime(v, f)
         except ValueError:
-            return None
-    if not (ndc and desc) or price <= 0:
+            pass
+    return None
+
+
+def _row(r: dict) -> dict | None:
+    r = {_key(k): (v or "").strip() for k, v in r.items() if k}
+    ndc, desc = r.get("ndc"), r.get("ndc_description")
+    when = _date(r.get("effective_date"))
+    try:
+        price = Decimal(r.get("nadac_per_unit", "").replace("$", "").replace(",", "").replace("$", "").replace(",", ""))
+    except InvalidOperation:
         return None
+    if not (ndc and desc) or when is None or price <= 0:
+        return None
+    unit = r.get("pricing_unit", "")
     return {"ndc": ndc, "desc": desc, "price": price, "when": when,
-            "unit": UNIT_WORD.get(r.get("pricing_unit", "").upper(), r.get("pricing_unit", "").lower() or "unit"),
-            "otc": r.get("otc", "").upper() == "Y"}
+            "unit": UNIT_WORD.get(unit.upper(), unit.lower() or "unit"), "otc": r.get("otc", "").upper() == "Y"}
 
 
 def import_nadac(db: Session, lines, max_points_per_ndc: int = 12) -> dict:
@@ -41,16 +54,23 @@ def import_nadac(db: Session, lines, max_points_per_ndc: int = 12) -> dict:
     seen: dict[str, dict] = {}
     hist: dict[str, dict] = {}
     rows = bad = 0
+    sample = None
+    sample = None
     for r in csv.DictReader(lines):
         rows += 1
+        sample = sample or r
         x = _row(r)
         if x is None:
             bad += 1
+            if sample is None:
+                sample = dict(list(r.items())[:6])
             continue
         h = hist.setdefault(x["ndc"], {})
         h[x["when"]] = x["price"]
         if x["ndc"] not in seen or x["when"] > seen[x["ndc"]]["when"]:
             seen[x["ndc"]] = x
+    if rows and not seen:
+        raise ValueError(f"No usable rows. Columns seen: {list(sample)}; first row: {list(sample.values())}")
     saved = 0
     for ndc, x in seen.items():
         url = f"https://data.medicaid.gov/nadac#{ndc}"
@@ -68,20 +88,24 @@ def import_nadac(db: Session, lines, max_points_per_ndc: int = 12) -> dict:
         if saved % 500 == 0:
             db.commit()
     db.commit()
-    return {"products": saved, "rows_read": rows, "bad_rows": bad, "source": SOURCE}
+    out = {"products": saved, "rows_read": rows, "bad_rows": bad, "source": SOURCE}
+    if saved == 0 and sample:
+        out["first_bad_row"] = sample
+    return out
 
 
 def find_download_url(client) -> str:
-    """Looks up the newest NADAC CSV link in the data.medicaid.gov catalogue."""
-    r = client.get("https://data.medicaid.gov/api/1/metastore/schemas/dataset/items?show-reference-ids=false", timeout=60)
+    """Finds the newest NADAC CSV link anywhere in the data.medicaid.gov catalogue."""
+    import re
+    r = client.get("https://data.medicaid.gov/api/1/metastore/schemas/dataset/items?show-reference-ids=false", timeout=120)
     r.raise_for_status()
-    best = None
-    for d in r.json():
-        if "nadac" in (d.get("title") or "").lower() and "national average" in (d.get("title") or "").lower():
-            for dist in d.get("distribution", []):
-                u = dist.get("downloadURL")
-                if u and u.endswith(".csv") and (best is None or d.get("title") > best[0]):
-                    best = (d["title"], u)
-    if not best:
-        raise RuntimeError("No NADAC CSV found in the catalogue; download it from data.medicaid.gov and use --file.")
-    return best[1]
+    urls = set(re.findall(r"https://[^\"\s\\]*nadac[^\"\s\\]*\.csv", r.text, flags=re.I))
+    urls = {u for u in urls if "national-average" in u.lower() or "nadac-national" in u.lower()} or urls
+
+    def when(u):
+        m = re.search(r"(\d{2})-(\d{2})-(\d{4})", u)
+        return (int(m.group(3)), int(m.group(1)), int(m.group(2))) if m else (0, 0, 0)
+
+    if not urls:
+        raise RuntimeError("No NADAC CSV link found in the catalogue; pass --url or --file.")
+    return max(urls, key=when)
