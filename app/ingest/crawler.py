@@ -130,6 +130,8 @@ def crawl_source(db: Session, domain: str, max_pages: int = 300, fetcher: Fetche
         return finish("no_sitemap", "No sitemap with URLs found")
 
     known = {u: t for u, t in db.query(WebProduct.url, WebProduct.fetched_at).filter(WebProduct.source_domain == domain)}
+    # product-looking URLs first: sitemaps list blog posts and categories too
+    urls = sorted(urls, key=lambda u: not PRODUCT_HINT.search(u))
     fresh = [u for u in urls if u[:1000] not in known]
     stale = sorted((u for u in urls if u[:1000] in known), key=lambda u: known[u[:1000]])
     for url in (fresh + stale)[:max_pages]:
