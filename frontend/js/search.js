@@ -17,7 +17,7 @@
   };
 
   const AVAIL_RANK = { available: 0, limited_stock: 1, unknown: 2, out_of_stock: 3 };
-  const QUICK = ["Paracetamol", "Ibuprofen", "Amoxicillin", "Cetirizine", "Omeprazole"];
+  const QUICK = I18N.lang === "fa" ? ["پاراستامول", "ایبوپروفن", "آموکسی‌سیلین", "ستیریزین", "امپرازول"] : ["Paracetamol", "Ibuprofen", "Amoxicillin", "Cetirizine", "Omeprazole"];
 
   MF.renderNav("search");
 
@@ -207,14 +207,27 @@
   function groupCard(g) {
     const unknown = g.offers.every((o) => o.availability === "unknown");
     const none = g.available === 0 && !unknown;
+    const title = g.generic || g.name;
+    const chips = [g.strength, g.form].filter(Boolean).map((c) => `<span class="tag" dir="ltr">${esc(c)}</span>`).join("");
+    const range = g.max_price != null && g.min_price != null && Number(g.max_price) > Number(g.min_price)
+      ? `<span class="pcard__range">${esc(I18N.t("Up to {p}", { p: fmtPrice(g.max_price, g.currency) }))}</span>` : "";
+    const unit = g.price_unit ? `<span class="pcard__unit">/ ${esc(g.price_unit)}</span>` : "";
+    const count = g.offer_count > 1 ? `<span class="pcard__count">${esc(I18N.t("{n} listings", { n: g.offer_count }))}</span>` : "";
     return `<a class="pcard" href="product.html?k=${encodeURIComponent(g.key)}">
-      <div class="pcard__img">${g.image_url ? `<img src="${esc(MF.safeUrl(g.image_url) || "")}" alt="" loading="lazy" referrerpolicy="no-referrer">` : icon("pill")}</div>
+      <div class="pcard__img">${g.image_url ? `<img src="${esc(MF.safeUrl(g.image_url) || "")}" alt="" loading="lazy" referrerpolicy="no-referrer">` : icon("pill")}
+        ${g.form ? `<span class="pcard__form" dir="ltr">${esc(g.form)}</span>` : ""}</div>
       <div class="pcard__body">
-        <h3 class="pcard__name">${esc(g.name)}</h3>
+        <h3 class="pcard__name">${esc(title)}</h3>
         ${g.title_fa ? `<div class="pcard__fa" dir="auto">${esc(g.title_fa)}</div>` : ""}
-        <div class="pcard__price">${g.min_price != null ? `<span class="hint">${none ? "Last price" : "From"}</span> <strong class="num">${esc(fmtPrice(g.min_price, g.currency))}</strong>` : '<span class="hint">Price not listed</span>'}</div>
-        <div class="pcard__meta"><span>${g.shops} shop${g.shops === 1 ? "" : "s"}</span>
-          <span class="pcard__stock" data-none="${none}" data-unk="${unknown}">${none ? "Out of stock" : unknown ? "Stock unknown" : g.available + " in stock"}</span></div>
+        ${chips ? `<div class="pcard__tags">${chips}</div>` : ""}
+        <div class="pcard__price">${g.min_price != null
+          ? `<span class="hint">${none ? "Last price" : "From"}</span><strong class="num">${esc(fmtPrice(g.min_price, g.currency))}</strong>${unit}${range ? "<br>" + range : ""}`
+          : '<span class="hint">Price not listed</span>'}</div>
+        <div class="pcard__meta">
+          <span class="pcard__src" title="${esc(g.cheapest_shop || "")}" data-nofa>${esc(g.cheapest_shop || "")}</span>${count}</div>
+        <div class="pcard__foot">
+          <span class="pcard__stock" data-none="${none}" data-unk="${unknown}">${none ? "Out of stock" : unknown ? "Stock unknown" : esc(I18N.t("{n} in stock", { n: g.available }))}</span>
+          <span class="pcard__go">${icon("chevron")}</span></div>
       </div></a>`;
   }
 

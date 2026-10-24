@@ -88,9 +88,13 @@ def build_group(key: str, rows: list[WebProduct]) -> dict:
     priced = [o["price"] for o in offers if o["price"] is not None and o["availability"] != "out_of_stock"] or \
              [o["price"] for o in offers if o["price"] is not None]
     first = rows[0]
+    a = analyze_title(first.title)
+    unit = next((m.group(1) for r in rows for m in [re.search(r"\(price per ([^)]+)\)", r.title)] if m), None)
     name = next((r.title_en for r in rows if r.title_en), None) or first.title
     fa = next((r.title for r in rows if re.search(r"[\u0600-\u06FF]", r.title)), None)
     return {
+        "strength": a["strength"], "form": a["form"], "price_unit": unit,
+        "offer_count": len(offers), "cheapest_shop": offers[0]["shop"] if offers else None,
         "key": key, "name": name, "title_fa": fa if fa and fa != name else None,
         "generic": next((r.generic_en for r in rows if r.generic_en), None),
         "image_url": next((r.image_url for r in rows if r.image_url), None),

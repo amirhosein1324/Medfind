@@ -377,10 +377,13 @@
         ${links.map((l) => `<a href="${l.href}"${l.key === active ? ' aria-current="page"' : ""}>${esc(l.label)}</a>`).join("")}
       </nav>
       <div class="nav__actions">
+        <button class="btn btn--ghost btn--sm lang-btn" type="button" data-lang-toggle data-nofa lang="${window.I18N && I18N.lang === "fa" ? "en" : "fa"}">${window.I18N && I18N.lang === "fa" ? "English" : "فارسی"}</button>
         <button class="btn btn--ghost btn--icon" type="button" data-theme-toggle aria-label="Switch theme">${icon("moon", "i-moon")}${icon("sun", "i-sun")}</button>
         ${account}
       </div>
     </div>`;
+    const lg = host.querySelector("[data-lang-toggle]");
+    if (lg) lg.addEventListener("click", () => window.I18N && I18N.toggle());
     const lo = host.querySelector("[data-logout]");
     if (lo) lo.addEventListener("click", logout);
     setTheme(currentTheme());

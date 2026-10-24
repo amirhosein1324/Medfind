@@ -227,6 +227,11 @@ class ProductGroupResponse(BaseModel):
     name: str
     title_fa: str | None = None
     generic: str | None = None
+    strength: str | None = None
+    form: str | None = None
+    price_unit: str | None = None
+    offer_count: int = 0
+    cheapest_shop: str | None = None
     image_url: str | None = None
     min_price: Decimal | None = None
     max_price: Decimal | None = None
