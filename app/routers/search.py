@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
+from ..config import settings
 from ..database import get_db
 from ..models import Medicine, MedicineAlias, Pharmacy, PharmacyProduct, SearchHistory
 from ..schemas import SearchResult
@@ -141,17 +142,17 @@ def search_medicine(
             )
         )
 
-    # Log the search for analytics/personalization, per the proposal's
-    # search_history entity. Anonymous searches are logged with user_id=None.
-    db.add(
-        SearchHistory(
-            search_query=q,
-            medicine_id=results[0].medicine_id if results else None,
-            latitude=latitude,
-            longitude=longitude,
-            sort_option=sort,
+    # Privacy by design: what people search for can reveal a health condition, so
+    # searches are NOT stored unless LOG_SEARCHES=true. Even then, only the text,
+    # sort option and matched medicine are kept: no user id, no coordinates.
+    if settings.log_searches:
+        db.add(
+            SearchHistory(
+                search_query=q,
+                medicine_id=results[0].medicine_id if results else None,
+                sort_option=sort,
+            )
         )
-    )
-    db.commit()
+        db.commit()
 
     return results

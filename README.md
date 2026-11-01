@@ -327,13 +327,12 @@ erDiagram
     CRAWL_SOURCES ||--o{ WEB_PRODUCTS : "crawled from"
 ```
 
-### Privacy (GDPR / PIPEDA)
+### Privacy (GDPR Art. 9 / PIPEDA)
 
-MedFind holds no medical records or prescriptions. Be aware of what it does store:
+What a person searches for can reveal a health condition, so MedFind is zero-log by default:
 
-- `search_history` keeps the search text, the sort option, the approximate coordinates sent with the search
-  (only if the person turned location on) and the user id when logged in. Anonymous searches have no user id.
-  Search text can reveal health information, so for production: add a retention limit (for example delete after
-  30 days), make logging opt-in, or drop the coordinates and user id.
-- Location otherwise stays in the browser and is used to compute distance.
-- Account data (name, email, optional phone) is stored for logged-in users and pharmacy owners.
+- Searches are **not stored**. `search_history` is only written when `LOG_SEARCHES=true` is set, and even then it
+  keeps only the search text, sort option and matched medicine: no user id and no coordinates.
+- Location stays in the browser and is only used to compute distance.
+- MedFind holds no prescriptions or medical records. Account data (name, email, optional phone) is stored for
+  logged-in users and pharmacy owners.

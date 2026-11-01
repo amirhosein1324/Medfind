@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     # Web discovery (Google Programmable Search API). Leave blank to disable.
     google_api_key: str = ""
     google_cse_id: str = ""
+    log_searches: bool = False     # privacy by design: search text can reveal health conditions
     web_cache_hours: int = 24      # re-use results for a query this long
     web_max_pages: int = 8         # pages fetched per uncached query
 

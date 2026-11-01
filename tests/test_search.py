@@ -209,18 +209,35 @@ def test_search_max_distance_filters_out_far_results(client):
     assert results[0]["pharmacy"] == "Near Pharmacy"
 
 
-def test_search_is_logged_to_search_history(client):
-    admin_headers = _make_admin(client)
-    client.get("/api/search/", params={"q": "some-query-to-log"})
-
+def _count_logged(q):
     from .conftest import TestingSessionLocal
     from app.models import SearchHistory
     db = TestingSessionLocal()
-    entries = db.query(SearchHistory).filter(
-        SearchHistory.search_query == "some-query-to-log"
-    ).all()
+    try:
+        return db.query(SearchHistory).filter(SearchHistory.search_query == q).count()
+    finally:
+        db.close()
+
+
+def test_search_is_not_logged_by_default(client):
+    """Privacy by design: search text can reveal a health condition."""
+    _make_admin(client)
+    client.get("/api/search/", params={"q": "private-query"})
+    assert _count_logged("private-query") == 0
+
+
+def test_search_logging_is_opt_in_and_stores_no_location(client, monkeypatch):
+    from app.config import settings
+    monkeypatch.setattr(settings, "log_searches", True)
+    _make_admin(client)
+    client.get("/api/search/", params={"q": "some-query-to-log", "latitude": 35.7, "longitude": 51.4})
+    assert _count_logged("some-query-to-log") == 1
+    from .conftest import TestingSessionLocal
+    from app.models import SearchHistory
+    db = TestingSessionLocal()
+    row = db.query(SearchHistory).filter(SearchHistory.search_query == "some-query-to-log").one()
     db.close()
-    assert len(entries) == 1
+    assert row.latitude is None and row.longitude is None and row.user_id is None
 
 
 def test_search_result_includes_pharmacy_contact_fields(client):
