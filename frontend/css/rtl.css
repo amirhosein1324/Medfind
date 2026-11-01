@@ -1,0 +1,43 @@
+/* Persian font + right-to-left fixes. Layout built with flex/grid flips by itself;
+   only the physical left/right rules from the other stylesheets are overridden. */
+@font-face {
+  font-family: "Vazirmatn";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("../fonts/vazirmatn-wght.woff2") format("woff2");
+  unicode-range: U+0600-06FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE80-FEFC;
+}
+html[lang="fa"] {
+  --font-ui: "Vazirmatn", "Figtree", system-ui, "Segoe UI", Tahoma, sans-serif;
+  --font-display: "Vazirmatn", "Bricolage Grotesque", "Figtree", system-ui, sans-serif;
+}
+html[lang="fa"] body { line-height: 1.75; }
+html[lang="fa"] h1, html[lang="fa"] h2, html[lang="fa"] h3, html[lang="fa"] h4 { line-height: 1.4; }
+html[lang="fa"] *, html[lang="fa"] *::before, html[lang="fa"] *::after { letter-spacing: 0 !important; }
+
+[dir="rtl"] .skip { left: auto; right: 1rem; }
+[dir="rtl"] .nav__links { margin-left: 0; margin-right: var(--s-4); }
+[dir="rtl"] .nav__actions { margin-left: 0; margin-right: auto; }
+[dir="rtl"] .select { padding-right: 0.9rem; padding-left: 2.4rem; background-position: left 0.9rem center; }
+[dir="rtl"] .searchbar { padding-left: 0; padding-right: 14px; }
+[dir="rtl"] .quick__label { margin-right: 0; margin-left: 0.25rem; }
+[dir="rtl"] .stage__label { left: auto; right: 1.75rem; }
+[dir="rtl"] .range output { text-align: left; }
+[dir="rtl"] .result__buy { text-align: left; }
+[dir="rtl"] .result__actions { margin-left: 0 !important; margin-right: auto; }
+[dir="rtl"] .cmp th, [dir="rtl"] .dt th, [dir="rtl"] .cmp th[scope="row"] { text-align: right !important; }
+[dir="rtl"] .cmp .r { text-align: left; }
+[dir="rtl"] .seg__btn + .seg__btn { border-left: 0; border-right: 1.5px solid var(--line-2); }
+@media (min-width: 900px) {
+  [dir="rtl"] .why__item { border-left: 0; border-right: 1px solid var(--line); }
+  [dir="rtl"] .why__item:first-child { padding-left: 2rem; padding-right: 0; border-right: 0; }
+}
+@media (max-width: 899px) { [dir="rtl"] .result__buy { text-align: right; } }
+[dir="rtl"] .crumb svg { transform: rotate(-90deg) !important; }
+[dir="rtl"] .chart, [dir="rtl"] .num, [dir="rtl"] .price, [dir="rtl"] .offer__price { direction: ltr; unicode-bidi: isolate; }
+[dir="rtl"] .pcard__price strong, [dir="rtl"] .pp__stat b { unicode-bidi: plaintext; }
+[dir="rtl"] input[type="email"], [dir="rtl"] input[type="url"], [dir="rtl"] input[type="tel"], [dir="rtl"] input[type="password"] { direction: ltr; text-align: right; }
+
+/* language switch */
+.lang-btn { font-weight: 650; min-width: 3.2rem; }
