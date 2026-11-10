@@ -11,23 +11,29 @@ shown in Admin > Data sources.
 import argparse
 import logging
 import time
+from concurrent.futures import ThreadPoolExecutor
 
 from app.database import Base, SessionLocal, engine
 from app.ingest.crawler import crawl_source
 from app.ingest.sources import get_sources
 
 
-def run_once(domains, max_pages):
-    for d in domains:
-        db = SessionLocal()
-        try:
-            r = crawl_source(db, d, max_pages)
-            print(f"{d}: {r['status']} (urls={r['urls']}, saved={r['saved']})", flush=True)
-        except Exception as e:  # one bad site must not stop the rest
-            db.rollback()
-            print(f"{d}: error {e}", flush=True)
-        finally:
-            db.close()
+def _crawl_one(d, max_pages):
+    db = SessionLocal()
+    try:
+        r = crawl_source(db, d, max_pages)
+        print(f"{d}: {r['status']} (urls={r['urls']}, saved={r['saved']})", flush=True)
+    except Exception as e:  # one bad site must not stop the rest
+        db.rollback()
+        print(f"{d}: error {e}", flush=True)
+    finally:
+        db.close()
+
+
+def run_once(domains, max_pages, workers=4):
+    """Different shops are crawled in parallel (each one still politely, one page at a time)."""
+    with ThreadPoolExecutor(max_workers=max(1, workers)) as pool:
+        list(pool.map(lambda d: _crawl_one(d, max_pages), domains))
 
 
 def main():
@@ -35,13 +41,14 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--domain", action="append")
     ap.add_argument("--max-pages", type=int, default=300)
+    ap.add_argument("--workers", type=int, default=4, help="shops crawled in parallel")
     ap.add_argument("--loop", action="store_true")
     ap.add_argument("--every", type=float, default=6, help="hours between passes with --loop")
     a = ap.parse_args()
     Base.metadata.create_all(bind=engine)
     domains = a.domain or get_sources()
     while True:
-        run_once(domains, a.max_pages)
+        run_once(domains, a.max_pages, a.workers)
         if not a.loop:
             break
         time.sleep(a.every * 3600)
