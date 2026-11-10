@@ -7,11 +7,13 @@ features the proposal calls out as needed for production.
 
 ## Screenshots
 
-| English (LTR) | Persian (RTL) |
+| Search | Medicine page |
 |:---:|:---:|
-| ![MedFind search results in English](s_en_search.png) | ![MedFind search results in Persian](s_fa_search.png) |
+| ![MedFind search results](docs/screenshots/search-fa.png) | ![Medicine page with every shop and price history](docs/screenshots/product-fa.png) |
 
-The screenshots show sample data. The language button (**فارسی / English**) in the top bar switches the whole public site between English and Persian with right-to-left layout.
+MedFind is **Persian only** (right-to-left, Vazirmatn font, prices in Toman, Jalali dates) and runs fully inside
+Iran: it makes no request to any foreign service, loads no foreign font/CDN/map script, and stores no English-language data.
+The screenshots show sample data.
 
 ## 1. Project Structure
 
@@ -247,34 +249,49 @@ they're not yet automated here:
   scale or isn't fuzzy enough — the proposal's "Smart Search" section
   (typo tolerance, relevance ranking) is a natural next iteration here.
 
-## Finding medicines on other websites (optional)
-MedFind can discover products on third-party sites through the official **Google Programmable Search API**, read their schema.org price/stock data (respecting robots.txt), cache the result for 24 h and show it under "From other websites".
-1. Create a search engine set to "Search the entire web" at programmablesearchengine.google.com and copy its ID.
-2. Enable the Custom Search API in Google Cloud and create an API key (100 free queries/day).
-3. Put `GOOGLE_API_KEY` and `GOOGLE_CSE_ID` in `.env`, then `docker compose up -d --build`.
-Endpoint: `GET /api/web/search?q=...`. These results are not confirmed by a pharmacy and are labelled as such.
+## Real data (Persian, from Iranian websites)
 
-## Real data: catalogue and pharmacy stock
-**Medicine catalogue** (do this first so search covers real medicines):
-    python -m scripts.import_catalog --openfda --limit 5000        # US FDA drug directory (free)
-    python -m scripts.import_catalog --csv regulator_list.csv      # any country's official list
-    (Docker: docker compose exec api python -m scripts.import_catalog --openfda)
-CSV columns: name, generic_name, brand_name, dosage, form, barcode, manufacturer, prescription_required, aliases (use | between aliases). Admins can also upload this CSV in Admin > Medicines > Import CSV.
+**Online pharmacy prices** come from the crawler (below); nothing is typed in or invented.
 
-**Pharmacy stock**: owners click "Import file" on their dashboard and upload a CSV/XLSX with `medicine` (or `barcode`) plus `price`, `status`, `stock`. Rows are matched to the catalogue by barcode, name or alias; changes are written to the audit history; unmatched rows are listed so they can be fixed. API: `POST /api/pharmacies/{id}/import` (multipart `file`).
+**Medicine catalogue** (optional, for pharmacy owners' stock lists): `python -m scripts.import_catalog --csv drug_list.csv`
+(Docker: `docker compose exec api python -m scripts.import_catalog --csv /app/drug_list.csv`).
+CSV columns: name, generic_name, brand_name, dosage, form, barcode, manufacturer, prescription_required, aliases (use | between aliases).
+Admins can also upload this CSV in Admin > Medicines > Import CSV.
+
+**Published price lists** (for example an official consumer price list): Admin > Data sources > Import a price list, or
+`python -m scripts.import_pricelist FILE --source SITE`. Persian headers (نام دارو، قیمت، ریال/تومان) are understood; Rial is converted to Toman.
+
+**Pharmacy stock**: owners click "وارد کردن فایل" on their dashboard and upload a CSV/XLSX with `نام دارو` (or `بارکد`) plus `قیمت`, `وضعیت`, `موجودی`.
+Rows are matched to the catalogue by barcode, name or alias; changes are written to the audit history; unmatched rows are listed so they can be fixed.
+API: `POST /api/pharmacies/{id}/import` (multipart `file`).
 
 ## Automatic data from Iranian online pharmacies (no manual entry)
-A crawler reads product pages of Iranian online pharmacies, stores name, price (converted to Toman), stock and link, derives English names from the Persian titles (`app/ingest/persian.py`), and the search page shows them under "Online pharmacies". Search works in English or Persian.
+A crawler reads product pages of Iranian online pharmacies and stores title (cleaned of shop boilerplate), price (converted to Toman), stock and link.
+The search page shows them as one card per medicine. All names shown to users are Persian; an English generic key is kept internally only for grouping.
 
     docker compose up -d --build        # starts api + db + crawler (re-crawls every 6 h)
     docker compose logs -f crawler      # watch it work
-    docker compose exec api python -m scripts.crawl --domain example.ir --max-pages 50   # one site, now
+    docker compose exec api python -m scripts.crawl --max-pages 3000 --workers 6          # everything, now, 6 shops in parallel
+    docker compose exec api python -m scripts.crawl --domain darukade.com --max-pages 50  # one site
 
-* Sites: `CRAWL_SOURCES=a.ir,b.ir` in `.env` (defaults in `app/ingest/sources.py` are unverified candidates).
-* Rules: a site is crawled only if its robots.txt allows it, with a delay between requests, public addresses only.
-* Pages are read through schema.org Product JSON-LD, Torob-style `product_price` meta tags, or Open Graph price tags.
-* Admin > Data sources shows, per site, whether it worked: Working / Site forbids crawlers / Not reachable / No sitemap / No price data. Fix by removing sites that don't work or adding ones that do.
-* Do NOT run `scripts.seed_demo` in production: it creates fake sample pharmacies for UI demos only.
+* **Sites**: `CRAWL_SOURCES=a.ir,b.ir` in `.env`. `app/ingest/sources.py` lists 7 sites confirmed to work and 11 more candidates that are not verified yet.
+  Run `docker compose exec crawler python -m scripts.check_sites` to see which work from your server, then remove the ones that do not.
+* **Rules**: a site is crawled only if its robots.txt allows it, with a delay between requests, public addresses only.
+* **Pages** are read through schema.org Product JSON-LD, Torob-style `product_price` meta tags, or Open Graph price tags.
+* **Admin > منابع داده** shows, per site, whether it worked: working / forbids crawlers / not reachable / no sitemap / no price data.
+* **More data**: add more shop domains to `CRAWL_SOURCES`, raise `--max-pages`, and import any published price list (above).
+
+### Cleaning and maintenance
+    docker compose exec api python -m scripts.purge_english           # list rows without Persian titles
+    docker compose exec api python -m scripts.purge_english --yes     # delete them (and their price history)
+    docker compose exec api python -m scripts.reclean                 # re-apply title cleaning to existing rows
+
+### Running inside Iran
+* Host the API, database and crawler on a server inside Iran (the Docker images need only Python packages; use an Iranian PyPI mirror
+  such as `pip install -i <mirror>` or a local registry when building). The frontend ships its own font and has no external requests.
+* Map links ("مسیریابی") default to OpenStreetMap; set `mapLink` / `mapSearch` in `frontend/js/config.js` to a domestic map service.
+* `run_crawler_local.bat` (Windows) runs the crawler without Docker; `requirements-crawler.txt` is its small dependency list.
+* Set `CRAWL_PROXY` in `.env` only if your network needs an HTTP proxy to reach the shops.
 
 ## Torob-style comparison
 Search shows one card per medicine ("from X Toman, N shops, M in stock"), grouped across shops by generic + strength + form. A card opens `product.html?k=...`: every shop's offer cheapest first with a "Go to shop" button, lowest/average price, and a price-history chart built from the crawler's re-checks (`price_points`). API: `GET /api/web/search?q=` (grouped, `sort=price|relevance`) and `GET /api/web/product?key=`.
@@ -284,27 +301,18 @@ Search shows one card per medicine ("from X Toman, N shops, M in stock"), groupe
     docker compose exec crawler python -m scripts.check_sites banidaroo.com
 Compares robots.txt and home page as MedFindBot vs a normal browser: network trouble (DNS/TLS/timeout) looks the same for both; a bot block (403, connection reset) only hits the bot.
 
-## Real English data (no fake data)
-
-```
-docker compose exec api python -m scripts.import_nadac
-```
-Downloads the newest CMS **NADAC** file (public US data, ~25k drug products, real USD prices with weekly history).
-These are pharmacy *acquisition* costs per unit (tablet / mL / g), not shelf prices. Use `--file nadac.csv` if you
-download the CSV yourself from data.medicaid.gov. Do not run `seed_demo` on a real installation.
-
 ## Search design
 
 **Matching** (`app/ingest/service.py`, `app/ingest/fuzzy.py`)
 
 1. Query normalisation: Persian digits and letter variants are unified and zero-width joiners removed, so
    `آموکسی‌سیلین` equals `آموکسی سیلین`.
-2. Bilingual expansion: a Persian-to-English drug dictionary expands every query, so `paracetamol` finds
-   `پاراستامول` listings and the reverse.
-3. Substring match on title, English title and generic name.
+2. A Persian drug-name dictionary (about 150 ingredients, `app/ingest/persian.py`) recognises the active ingredient,
+   strength and dosage form in each shop title, so different shops' titles for the same medicine are grouped.
+3. Substring match on the Persian title and the internal generic key.
 4. If fewer than three rows match, typo tolerance kicks in: PostgreSQL `pg_trgm` `word_similarity >= 0.4`
-   (GIN trigram indexes are created at start-up; other databases fall back to `difflib`). `paracetmol`
-   finds Paracetamol, and the API answers with `fuzzy: true` so the UI can say so.
+   (GIN trigram indexes are created at start-up; other databases fall back to `difflib`). `پاراستمول`
+   finds پاراستامول, and the API answers with `fuzzy: true` so the UI can say so.
 
 **Grouping and ranking:** listings are grouped by generic + strength + form into one card with the cheapest
 offer first; within a group offers sort by in-stock, then price. Pharmacy results rank by availability, then
