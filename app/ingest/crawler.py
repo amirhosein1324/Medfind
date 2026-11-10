@@ -119,16 +119,16 @@ def crawl_source(db: Session, domain: str, max_pages: int = 300, fetcher: Fetche
     rp = f.robots(base)
     if rp is None:
         why = f.errors.get(base, "unknown error")
-        return finish("unreachable", f"Could not read robots.txt: {why}")
+        return finish("unreachable", f"خواندن robots.txt ممکن نشد: {why}")
     if not rp.can_fetch("MedFindBot", base + "/"):
-        return finish("blocked_by_robots", "robots.txt does not allow crawling")
+        return finish("blocked_by_robots", "robots.txt اجازهٔ خزش نمی‌دهد")
 
     urls = discover_urls(f, base)
     if not any(PRODUCT_HINT.search(u) for u in urls):
         urls = discover_by_links(f, base) or urls
     result["urls"] = len(urls)
     if not urls:
-        return finish("no_sitemap", "No sitemap with URLs found")
+        return finish("no_sitemap", "نقشهٔ سایت (sitemap) پیدا نشد")
 
     known = {u: t for u, t in db.query(WebProduct.url, WebProduct.fetched_at).filter(WebProduct.source_domain == domain)}
     # product-looking URLs first: sitemaps list blog posts and categories too
@@ -147,5 +147,5 @@ def crawl_source(db: Session, domain: str, max_pages: int = 300, fetcher: Fetche
         if result["saved"] % 25 == 0:
             db.commit()
     if result["saved"] == 0:
-        return finish("no_product_data", f"{len(urls)} URLs found but no pages had price markup (JSON-LD Product or product_price meta)")
-    return finish("ok", f"{result['saved']} products updated this run")
+        return finish("no_product_data", f"{len(urls)} آدرس پیدا شد اما هیچ صفحه‌ای داده قیمت (JSON-LD یا meta) نداشت")
+    return finish("ok", f"{result['saved']} محصول در این اجرا به‌روز شد")

@@ -1,13 +1,13 @@
 import logging
 
-import httpx
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from ..database import SessionLocal, get_db
-from ..ingest import google, service
+from ..ingest import service
 from ..ingest.crawler import crawl_source
+from ..ingest.persian import fa_generic
 from ..ingest.pricelist import import_pricelist
 from ..ingest.sheet import SheetError
 from ..ingest.sources import get_sources
@@ -22,19 +22,13 @@ log = logging.getLogger("medfind.web")
 @router.get("/search", response_model=WebSearchResponse)
 def web_search(q: str, sort: str = "relevance", db: Session = Depends(get_db)):
     """Medicine products found on Iranian online pharmacies by the crawler,
-    searchable in English or Persian. NOT confirmed by a MedFind pharmacy."""
+    searchable in Persian. NOT confirmed by a MedFind pharmacy."""
     key = service.norm_query(q)
     total = db.query(func.count(WebProduct.product_id)).scalar() or 0
-    enabled = total > 0 or google.enabled()
+    enabled = total > 0
     if len(key) < 2 or not enabled:
         return WebSearchResponse(enabled=enabled, items=[])
     rows, is_fuzzy = service.search_local_ex(db, key)
-    if len(rows) < 3 and google.enabled() and not service.is_fresh(db, key):
-        try:
-            service.google_discover(db, key)
-            rows, is_fuzzy = service.search_local_ex(db, key)
-        except httpx.HTTPError as e:
-            log.warning("google discovery failed: %s", e)
     return WebSearchResponse(
         enabled=True, fuzzy=is_fuzzy,
         items=[WebProductResponse.model_validate(r) for r in rows],
@@ -54,16 +48,16 @@ def web_product(key: str, db: Session = Depends(get_db)):
 
 @router.get("/suggest")
 def web_suggest(q: str, db: Session = Depends(get_db)):
-    """Type-ahead names built from crawled products (English first)."""
+    """Type-ahead names (Persian) built from crawled products."""
     key = service.norm_query(q)
     if len(key) < 2:
         return []
     seen, out = set(), []
     for r in service.search_local(db, key, 200):
-        name = r.title_en or r.title
+        name = r.title
         if name.lower() not in seen:
             seen.add(name.lower())
-            out.append({"name": name, "generic_name": r.generic_en})
+            out.append({"name": name, "generic_name": fa_generic(r.generic_en)})
         if len(out) >= 8:
             break
     return out

@@ -1,20 +1,30 @@
 """Which websites the crawler visits. Override with CRAWL_SOURCES=a.com,b.com.
-These Iranian online pharmacies were found by search but NOT verified:
-whether each can be crawled (robots.txt, markup) is reported per site in
-Admin > Data sources after the first run."""
+Every source is an Iranian online pharmacy. The first group was confirmed to be
+crawlable; the second group was found by search and is NOT verified: run
+`python -m scripts.check_sites` to see which ones work from your connection."""
 import os
 
 DEFAULT_SOURCES = [
-    "pharmacy.digikala.com",
-    "snapp.doctor",
-    "digidaroo.org",
-    "banidaroo.com",
-    "betadarou.com",
-    "darookhaneonline.com",
-    "pezeshkbook.com",
-    "darooboom.com",
-    "daroogram.com",
+    # confirmed (robots.txt allows crawling, products have price markup)
     "darukade.com",
+    "darookhaneonline.com",
+    "digidaroo.org",
+    "darooboom.com",
+    "banidaroo.com",
+    "daroogram.com",
+    "betadarou.com",
+    # candidates, not verified
+    "mosbatesabz.com",
+    "daroohome.com",
+    "daroohelp.com",
+    "darubiar.com",
+    "daroodrug.com",
+    "zeevash.com",
+    "mcdarou.com",
+    "darushahr.com",
+    "ezdaroo.com",
+    "snapp.doctor",
+    "pharmacy.digikala.com",
 ]
 
 

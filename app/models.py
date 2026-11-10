@@ -205,7 +205,7 @@ class SearchHistory(Base):
 
 class WebProduct(Base):
     """A medicine product found on a third-party website by the crawler (or by
-    Google discovery). Not a MedFind pharmacy listing: nobody here confirmed it.
+    crawler). Not a MedFind pharmacy listing: nobody here confirmed it.
     Prices are in Toman (IRT) for Iranian sites."""
 
     __tablename__ = "web_products"
@@ -239,7 +239,7 @@ class CrawlSource(Base):
 
 class ExternalQuery(Base):
     """Remembers when a query was last sent to the web, so we cache it and
-    stay inside the Google API quota."""
+    (legacy; no longer used)."""
 
     __tablename__ = "external_queries"
 

@@ -1,20 +1,13 @@
-"""Querying the web product index, with optional live Google discovery."""
-from concurrent.futures import ThreadPoolExecutor
+"""Querying the web product index (products crawled from Iranian pharmacy websites)."""
 from datetime import datetime, timedelta
-from urllib.parse import urlparse
-
 import re
 
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
-from ..config import settings
-from ..models import ExternalQuery, PricePoint, WebProduct
-from . import fuzzy, google
-from .crawler import upsert_product
-from .extract import extract_products
-from .http import Fetcher
-from .persian import analyze_title, normalize, search_terms
+from ..models import PricePoint, WebProduct
+from . import fuzzy
+from .persian import analyze_title, fa_form, fa_generic, fa_strength, normalize, search_terms
 
 _RANK = {"available": 0, "limited_stock": 1, "unknown": 2, "out_of_stock": 3}
 
@@ -47,32 +40,6 @@ def search_local(db: Session, q: str, limit: int = 80) -> list[WebProduct]:
     return search_local_ex(db, q, limit)[0]
 
 
-def is_fresh(db: Session, q: str) -> bool:
-    meta = db.get(ExternalQuery, q)
-    return bool(meta and meta.fetched_at > datetime.utcnow() - timedelta(hours=settings.web_cache_hours))
-
-
-def _process(url: str, f: Fetcher) -> list[tuple[str, str, dict]]:
-    html = f.get(url)
-    host = (urlparse(url).hostname or "").removeprefix("www.")
-    return [(url, host, p) for p in extract_products(html or "")[:1]]
-
-
-def google_discover(db: Session, raw_query: str) -> None:
-    """Find extra pages for a query through Google and add them to the index."""
-    q = norm_query(raw_query)
-    urls = google.search_urls(q, settings.web_max_pages)[: settings.web_max_pages]
-    f = Fetcher(delay=0.5)
-    with ThreadPoolExecutor(max_workers=4) as pool:
-        found = [x for res in pool.map(lambda u: _process(u, f), urls) for x in res]
-    for url, host, p in found:
-        upsert_product(db, url, host, p)
-    meta = db.get(ExternalQuery, q) or ExternalQuery(query=q)
-    meta.fetched_at, meta.result_count = datetime.utcnow(), len(found)
-    db.add(meta)
-    db.commit()
-
-
 # ---------------------------------------------------------------- grouping
 def _slug(t: str) -> str:
     return re.sub(r"[^\w]+", "-", normalize(t).lower(), flags=re.U).strip("-")[:90]
@@ -101,14 +68,16 @@ def build_group(key: str, rows: list[WebProduct]) -> dict:
              [o["price"] for o in offers if o["price"] is not None]
     first = rows[0]
     a = analyze_title(first.title)
-    unit = next((m.group(1) for r in rows for m in [re.search(r"\(price per ([^)]+)\)", r.title)] if m), None)
-    name = next((r.title_en for r in rows if r.title_en), None) or first.title
-    fa = next((r.title for r in rows if re.search(r"[\u0600-\u06FF]", r.title)), None)
+    generic_fa = fa_generic(next((r.generic_en for r in rows if r.generic_en), None))
+    form_fa, strength_fa = fa_form(a["form"]), fa_strength(a["strength"])
+    persian = [r.title for r in rows if re.search(r"[\u0600-\u06FF]", r.title)]
+    # Persian display name, e.g. "قرص پاراستامول 500 میلی‌گرم"; otherwise the shortest shop title
+    name = " ".join(x for x in (form_fa, generic_fa, strength_fa) if x) if generic_fa else (min(persian, key=len) if persian else first.title)
     return {
-        "strength": a["strength"], "form": a["form"], "price_unit": unit,
+        "strength": strength_fa, "form": form_fa, "price_unit": None,
         "offer_count": len(offers), "cheapest_shop": offers[0]["shop"] if offers else None,
-        "key": key, "name": name, "title_fa": fa if fa and fa != name else None,
-        "generic": next((r.generic_en for r in rows if r.generic_en), None),
+        "key": key, "name": name, "title_fa": None,
+        "generic": generic_fa,
         "image_url": next((r.image_url for r in rows if r.image_url), None),
         "min_price": min(priced) if priced else None, "max_price": max(priced) if priced else None,
         "currency": next((r.currency for r in rows if r.currency), None),

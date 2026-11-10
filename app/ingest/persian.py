@@ -128,3 +128,30 @@ def to_toman(price, currency):
     if c in ("IRT", "TOMAN", "تومان", "IRHT"):
         return price, "IRT"
     return price, (currency or None)
+
+
+# ---- Persian display names (the interface never shows English) ----------------
+FORM_FA = {v: k for k, v in FORMS.items()}
+UNIT_FA = {"mg": "میلی‌گرم", "mcg": "میکروگرم", "g": "گرم", "IU": "واحد", "ml": "میلی‌لیتر", "%": "درصد"}
+_EN_FA_DISPLAY = {en.lower(): fa for en, fa in EN_FA.items()}
+_EN_FA_DISPLAY.update({"paracetamol": "پاراستامول", "amoxicillin": "آموکسی‌سیلین", "co-trimoxazole": "کوتریموکسازول",
+                       "diphenhydramine": "دیفن‌هیدرامین", "multivitamin": "مولتی‌ویتامین"})
+
+
+def fa_generic(generic_en):
+    """'Paracetamol' -> 'پاراستامول' (None if unknown)."""
+    if not generic_en:
+        return None
+    return _EN_FA_DISPLAY.get(generic_en.lower())
+
+
+def fa_form(form_en):
+    return FORM_FA.get(form_en) if form_en else None
+
+
+def fa_strength(strength):
+    """'500mg' -> '500 میلی‌گرم'."""
+    if not strength:
+        return None
+    m = re.fullmatch(r"(\d+(?:\.\d+)?)(\D+)", strength)
+    return f"{m.group(1)} {UNIT_FA.get(m.group(2), m.group(2))}" if m else strength
