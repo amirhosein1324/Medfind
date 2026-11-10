@@ -7,7 +7,6 @@
     q: "",
     loc: store.json(KEYS.loc, null),
     raw: [],
-    demo: false,
     productId: null,
     sort: "best",
     view: store.get("medfind_view") === "table" ? "table" : "cards",
@@ -17,7 +16,7 @@
   };
 
   const AVAIL_RANK = { available: 0, limited_stock: 1, unknown: 2, out_of_stock: 3 };
-  const QUICK = I18N.lang === "fa" ? ["ویتامین", "منیزیم", "زینک", "شربت", "قطره"] : ["Paracetamol", "Ibuprofen", "Amoxicillin", "Cetirizine", "Omeprazole"];
+  const QUICK = ["ویتامین", "منیزیم", "زینک", "شربت", "قطره"];
 
   MF.renderNav("search");
 
@@ -26,7 +25,7 @@
     ".searchbar__icon": "search", ".searchbar__go-icon": "search", "#locBtnIcon": "locate",
     "#sampleFlag": null, "#samplePin": "pin", "#why1": "search", "#why2": "clock", "#why3": "shield",
     "#filtersBtnIcon": "sliders", "#viewCards": "cards", "#viewTable": "table",
-    "#filtersClose": "x", "#connClose": "x", "#demoBannerIcon": "alert",
+    "#filtersClose": "x", "#connClose": "x",
   };
   Object.keys(slots).forEach((sel) => { const el = $(sel); if (el && slots[sel]) el.innerHTML = icon(slots[sel]); });
   $("#sampleFlag").innerHTML = icon("check") + "<span>Best match</span>";
@@ -52,7 +51,7 @@
         const [a, b] = await Promise.all([api.medicines(q), api.webSuggest(q).catch(() => [])]);
         const seen = new Set(a.map((m) => m.name.toLowerCase()));
         list = a.slice(0, 5).concat(b.filter((m) => !seen.has(m.name.toLowerCase())));
-      } catch (e) { list = window.MFDemo ? MFDemo.medicines(q) : []; }
+      } catch (e) { list = []; }
       return (list || []).slice(0, 8);
     },
     render: (m) => `<span>${esc(m.name)}</span><small>${esc(m.generic_name || m.brand_name || "")}</small>`,
@@ -178,16 +177,12 @@
       let data;
       try {
         data = await api.search(params, state.ctrl.signal);
-        state.demo = false;
       } catch (e) {
         if (e.name === "AbortError") return;
-        if (!e.network || !window.MFDemo) throw e;
-        data = MFDemo.search(q, state.loc);
-        state.demo = true;
+        throw e;
       }
       if (my !== state.seq) return;
       state.raw = data || [];
-      $("#demoBanner").hidden = !state.demo;
       render(true);
       loadWeb(q, my);
     } catch (e) {
@@ -200,22 +195,22 @@
   }
 
   /* ------------------------------------------------ results from other websites */
-  const toman = (v) => Math.round(Number(v)).toLocaleString("en-US");
-  const fmtPrice = (v, cur) => v == null ? "" : cur === "IRT" ? toman(v) + " Toman" : (v < 1 ? Number(v).toFixed(4).replace(/0+$/, "").replace(/\.$/, ".00") : Number(v).toFixed(2)) + " " + (cur || "");
+  const toman = (v) => Math.round(Number(v)).toLocaleString("fa-IR");
+  const fmtPrice = (v) => v == null ? "" : toman(v) + " تومان";
   let webGroups = [], webSort = "relevance";
 
   function groupCard(g) {
     const unknown = g.offers.every((o) => o.availability === "unknown");
     const none = g.available === 0 && !unknown;
     const title = g.generic || g.name;
-    const chips = [g.strength, g.form].filter(Boolean).map((c) => `<span class="tag" dir="ltr">${esc(c)}</span>`).join("");
+    const chips = [g.strength, g.form].filter(Boolean).map((c) => `<span class="tag">${esc(c)}</span>`).join("");
     const range = g.max_price != null && g.min_price != null && Number(g.max_price) > Number(g.min_price)
       ? `<span class="pcard__range">${esc(I18N.t("Up to {p}", { p: fmtPrice(g.max_price, g.currency) }))}</span>` : "";
     const unit = g.price_unit ? `<span class="pcard__unit">/ ${esc(g.price_unit)}</span>` : "";
     const count = g.offer_count > 1 ? `<span class="pcard__count">${esc(I18N.t("{n} listings", { n: g.offer_count }))}</span>` : "";
     return `<a class="pcard" href="product.html?k=${encodeURIComponent(g.key)}">
       <div class="pcard__img">${g.image_url ? `<img src="${esc(MF.safeUrl(g.image_url) || "")}" alt="" loading="lazy" referrerpolicy="no-referrer">` : icon("pill")}
-        ${g.form ? `<span class="pcard__form" dir="ltr">${esc(g.form)}</span>` : ""}</div>
+        ${g.form ? `<span class="pcard__form">${esc(g.form)}</span>` : ""}</div>
       <div class="pcard__body">
         <h3 class="pcard__name">${esc(title)}</h3>
         ${g.title_fa ? `<div class="pcard__fa" dir="auto">${esc(g.title_fa)}</div>` : ""}
@@ -243,7 +238,6 @@
   async function loadWeb(q, my) {
     const host = $("#webResults");
     host.hidden = true;
-    if (state.demo) return;
     host.hidden = false;
     host.innerHTML = `<h2 class="web__title" id="webTitle">Medicines found online</h2><div class="pgrid">${[1, 2, 3].map(() => '<div class="skeleton" style="height:210px;border-radius:14px"></div>').join("")}</div>`;
     try {

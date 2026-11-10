@@ -6,7 +6,7 @@
   "use strict";
 
   const CFG = Object.assign(
-    { apiBase: "", currency: "$", staleHours: 48, agingHours: 6 },
+    { apiBase: "", staleHours: 48, agingHours: 6, mapLink: "https://www.openstreetmap.org/?mlat={lat}&mlon={lon}#map=17/{lat}/{lon}", mapSearch: "https://www.openstreetmap.org/search?query={q}" },
     window.MEDFIND_CONFIG || {}
   );
 
@@ -61,9 +61,9 @@
 
   function directionsUrl(item) {
     if (item.latitude != null && item.longitude != null) {
-      return "https://www.google.com/maps/dir/?api=1&destination=" + item.latitude + "," + item.longitude;
+      return CFG.mapLink.replace(/\{lat\}/g, item.latitude).replace(/\{lon\}/g, item.longitude);
     }
-    return "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(item.address || item.pharmacy || "");
+    return CFG.mapSearch.replace("{q}", encodeURIComponent(item.address || item.pharmacy || ""));
   }
 
   function haversineKm(lat1, lon1, lat2, lon2) {
@@ -99,7 +99,7 @@
     if (h < 24) return h + (h === 1 ? " hour ago" : " hours ago");
     const days = Math.round(h / 24);
     if (days < 30) return days + (days === 1 ? " day ago" : " days ago");
-    return d.toLocaleDateString();
+    return d.toLocaleDateString("fa-IR-u-ca-persian");
   }
 
   /** Maps listing age to the freshness meter: tier colour + lit bars (1-5). */
@@ -123,7 +123,7 @@
   function money(v) {
     if (v == null || v === "") return "";
     const n = Number(v);
-    return isNaN(n) ? "" : CFG.currency + n.toFixed(2);
+    return isNaN(n) ? "" : Math.round(n).toLocaleString("fa-IR") + " تومان";
   }
 
   /* ------------------------------------------------------------------ icons */
@@ -372,18 +372,15 @@
 
     host.className = "nav";
     host.innerHTML = `<div class="nav__inner wrap">
-      <a class="brand" href="index.html" aria-label="MedFind home">${LOGO}<span class="brand__name">MedFind</span></a>
+      <a class="brand" href="index.html" aria-label="خانهٔ مدفایند">${LOGO}<span class="brand__name">مدفایند</span></a>
       <nav class="nav__links" aria-label="Main">
         ${links.map((l) => `<a href="${l.href}"${l.key === active ? ' aria-current="page"' : ""}>${esc(l.label)}</a>`).join("")}
       </nav>
       <div class="nav__actions">
-        <button class="btn btn--ghost btn--sm lang-btn" type="button" data-lang-toggle data-nofa lang="${window.I18N && I18N.lang === "fa" ? "en" : "fa"}">${window.I18N && I18N.lang === "fa" ? "English" : "فارسی"}</button>
         <button class="btn btn--ghost btn--icon" type="button" data-theme-toggle aria-label="Switch theme">${icon("moon", "i-moon")}${icon("sun", "i-sun")}</button>
         ${account}
       </div>
     </div>`;
-    const lg = host.querySelector("[data-lang-toggle]");
-    if (lg) lg.addEventListener("click", () => window.I18N && I18N.toggle());
     const lo = host.querySelector("[data-logout]");
     if (lo) lo.addEventListener("click", logout);
     setTheme(currentTheme());

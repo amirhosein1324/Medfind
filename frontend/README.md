@@ -13,7 +13,6 @@ Shared: `css/medfind.css` (design tokens, light/dark), `css/app.css`, `js/core.j
 
 ## Run
     uvicorn app.main:app --reload          # or: docker compose up --build
-    python -m scripts.seed_demo            # demo data + accounts (docker: docker compose exec api python -m scripts.seed_demo)
 Open http://localhost:8000/app/
 
 Demo accounts (after seeding): `admin@medfind.test` and `owner@medfind.test`, password `Passw0rd!demo`.

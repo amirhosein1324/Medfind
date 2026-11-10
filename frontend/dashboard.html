@@ -1,13 +1,11 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="fa" dir="rtl" data-theme="light">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark">
-<title>My pharmacy · MedFind</title>
+<title>داروخانه من · مدفایند</title>
 <script>document.documentElement.dataset.theme=localStorage.getItem('medfind_theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light')</script>
-<link rel="preload" href="fonts/bricolage-grotesque-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="preload" href="fonts/figtree-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
 <script src="js/i18n.js"></script>
 <link rel="stylesheet" href="css/medfind.css">
 <link rel="stylesheet" href="css/rtl.css">
@@ -44,7 +42,7 @@
   <form class="sheet__form" id="impForm" method="dialog">
     <div class="sheet__head"><h2 id="impTitle">Import stock from a file</h2><button class="btn btn--ghost btn--icon" type="button" data-close-dialog aria-label="Close" id="impClose"></button></div>
     <div class="sheet__body">
-      <p style="color:var(--ink-2)">Upload a CSV or Excel file with a <b>medicine</b> (or <b>barcode</b>) column and any of <b>price</b>, <b>status</b>, <b>stock</b>. Existing listings are updated; new ones are added.</p>
+      <p style="color:var(--ink-2)">یک فایل CSV یا Excel با ستون <b>نام دارو</b> (یا <b>بارکد</b>) و دست‌کم یکی از ستون‌های <b>قیمت</b>، <b>وضعیت</b> و <b>موجودی</b> بارگذاری کنید. موردهای موجود به‌روز و موردهای جدید اضافه می‌شوند.</p>
       <p style="margin:var(--s-3) 0"><button class="link-btn" type="button" id="impTpl">Download a template</button></p>
       <div class="field"><label class="label" for="impFile">File (.csv or .xlsx, up to 2 MB)</label><input class="input" id="impFile" type="file" accept=".csv,.xlsx,.xlsm,.txt,.tsv" required></div>
       <div id="impResult" role="status" aria-live="polite" style="margin-top:var(--s-4)"></div>

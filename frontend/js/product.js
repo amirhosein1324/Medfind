@@ -4,8 +4,10 @@
   MF.renderNav("search");
   const root = $("#main");
   const key = new URLSearchParams(location.search).get("k");
-  const money = (v, cur) => v == null ? "–" : cur === "IRT" ? Math.round(Number(v)).toLocaleString("en-US") + " Toman" : (v < 1 ? Number(v).toFixed(4).replace(/0+$/, "").replace(/\.$/, ".00") : Number(v).toFixed(2)) + " " + (cur || "");
-  const short = (v) => Number(v) >= 1e6 ? (Number(v) / 1e6).toFixed(2).replace(/\.?0+$/, "") + "M" : Number(v) >= 1e3 ? Math.round(Number(v) / 1e3) + "k" : String(Math.round(Number(v)));
+  const money = (v) => v == null ? "–" : Math.round(Number(v)).toLocaleString("fa-IR") + " تومان";
+  const fa = (n) => Number(n).toLocaleString("fa-IR");
+  const short = (v) => Number(v) >= 1e6 ? fa(Math.round(Number(v) / 1e4) / 100) + " م" : Number(v) >= 1e3 ? fa(Math.round(Number(v) / 1e3)) + " هزار" : fa(Math.round(Number(v)));
+  const jd = (d) => new Date(d + "T00:00:00Z").toLocaleDateString("fa-IR-u-ca-persian", { timeZone: "UTC" });
 
   function chart(h, cur) {
     if (h.length < 2) return `<div class="empty" style="padding:var(--s-5)">${icon("clock")}<p>The price chart builds up as we re-check the shops (about every 6 hours). Come back soon.</p></div>`;
@@ -18,18 +20,18 @@
     const pts = h.map((p) => `${X(p.date).toFixed(1)},${Y(p.min_price).toFixed(1)}`);
     const grid = [0, 0.5, 1].map((f) => { const v = y0 + (y1 - y0) * f, y = Y(v); return `<line class="grid" x1="${L}" x2="${W - R}" y1="${y}" y2="${y}"/><text x="${L - 8}" y="${y + 4}" text-anchor="end">${short(v)}</text>`; }).join("");
     const last = h[h.length - 1];
-    return `<div class="chart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Lowest price over time, from ${esc(money(h[0].min_price, cur))} to ${esc(money(last.min_price, cur))}">
+    return `<div class="chart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="کمترین قیمت در طول زمان، از ${esc(money(h[0].min_price))} تا ${esc(money(last.min_price))}">
       ${grid}<polygon class="area" points="${L},${H - B} ${pts.join(" ")} ${X(last.date).toFixed(1)},${H - B}"/>
       <polyline class="line" points="${pts.join(" ")}"/>
-      ${h.length <= 40 ? h.map((p) => `<circle class="dot" r="3.5" cx="${X(p.date).toFixed(1)}" cy="${Y(p.min_price).toFixed(1)}"><title>${esc(p.date)}: ${esc(money(p.min_price, cur))}</title></circle>`).join("") : ""}
-      <text x="${L}" y="${H - 8}">${esc(h[0].date)}</text><text x="${W - R}" y="${H - 8}" text-anchor="end">${esc(last.date)}</text></svg></div>`;
+      ${h.length <= 40 ? h.map((p) => `<circle class="dot" r="3.5" cx="${X(p.date).toFixed(1)}" cy="${Y(p.min_price).toFixed(1)}"><title>${esc(jd(p.date))}: ${esc(money(p.min_price, cur))}</title></circle>`).join("") : ""}
+      <text x="${L}" y="${H - 8}">${esc(jd(h[0].date))}</text><text x="${W - R}" y="${H - 8}" text-anchor="end">${esc(jd(last.date))}</text></svg></div>`;
   }
 
   async function init() {
     if (!key) { root.innerHTML = `<div class="empty">${icon("search")}<h3>No product selected</h3><a class="btn btn--primary" href="index.html">Search medicines</a></div>`; return; }
     try {
       const g = await api.webProduct(key);
-      document.title = g.name + " · MedFind";
+      document.title = g.name + " · مدفایند";
       const cur = g.currency, inStock = g.offers.filter((o) => o.availability !== "out_of_stock");
       const bestUrl = inStock.length && inStock[0].price != null ? inStock[0].url : null;
       const avg = (() => { const p = inStock.filter((o) => o.price != null).map((o) => Number(o.price)); return p.length ? p.reduce((a, b) => a + b, 0) / p.length : null; })();

@@ -81,21 +81,21 @@
     root.innerHTML = `
       ${p.is_approved ? "" : `<div class="banner banner--info pending-banner" role="status">${icon("clock")}<span><strong>Waiting for approval.</strong> Your pharmacy isn't visible in search yet. You can add listings now.</span></div>`}
       <div class="page__head">
-        <div><h1>${esc(p.name)}</h1><p>${esc(p.address)}${p.is_approved ? ' · <span class="pill" data-t="ok">Live in search</span>' : ""}</p></div>
+        <div><h1>${esc(p.name)}</h1><p>${esc(p.address)}${p.is_approved ? ' · <span class="pill" data-t="ok">نمایش در جستجو</span>' : ""}</p></div>
         <div class="page__actions">
           ${S.pharmacies.length > 1 ? `<label class="visually-hidden" for="pharmSel">Pharmacy</label><select class="select" id="pharmSel" style="width:auto">${S.pharmacies.map((x) => `<option value="${x.pharmacy_id}"${x.pharmacy_id === S.pid ? " selected" : ""}>${esc(x.name)}</option>`).join("")}</select>` : ""}
-          <button class="btn btn--secondary" id="confirmAll">${icon("check-circle")}Everything is up to date</button>
-          <button class="btn btn--secondary" id="impBtn">${icon("upload")}Import file</button>
+          <button class="btn btn--secondary" id="confirmAll">${icon("check-circle")}همه چیز به‌روز است</button>
+          <button class="btn btn--secondary" id="impBtn">${icon("upload")}وارد کردن فایل</button>
           <button class="btn btn--primary" id="addBtn">${icon("plus")}Add medicine</button>
         </div>
       </div>
       <div class="stats">
-        <div class="stat"><div class="stat__n">${st.total}</div><div class="stat__l">Listings</div></div>
+        <div class="stat"><div class="stat__n">${st.total}</div><div class="stat__l">موردها</div></div>
         <div class="stat" data-tone="ok"><div class="stat__n">${st.avail}</div><div class="stat__l">Available</div></div>
         <div class="stat" data-tone="${st.out ? "bad" : ""}"><div class="stat__n">${st.out}</div><div class="stat__l">Out of stock</div></div>
-        <div class="stat" data-tone="${st.stale ? "warn" : "ok"}"><div class="stat__n">${st.stale}</div><div class="stat__l">Need confirming (${MF.CFG.staleHours}h+)</div></div>
+        <div class="stat" data-tone="${st.stale ? "warn" : "ok"}"><div class="stat__n">${st.stale}</div><div class="stat__l">نیازمند تأیید (بیش از ${MF.CFG.staleHours} ساعت)</div></div>
       </div>
-      <div class="toolbar"><label class="visually-hidden" for="filt">Filter listings</label>
+      <div class="toolbar"><label class="visually-hidden" for="filt">فیلتر موردها</label>
         <input class="input" id="filt" type="search" placeholder="Filter by medicine name" value="${esc(S.q)}"></div>
       <div id="tableHost"></div>
       <div class="two-col"><div><h2 class="section-title">Recent changes</h2><ul class="hist" id="hist"><li class="hint">Loading…</li></ul></div></div>`;
@@ -167,7 +167,7 @@
         if (u.old_status !== u.new_status) bits.push(`${esc(u.old_status || "–")} <span class="arrow">→</span> ${esc(u.new_status || "–")}`);
         if (u.old_stock !== u.new_stock) bits.push(`stock ${u.old_stock ?? "–"} <span class="arrow">→</span> ${u.new_stock ?? "–"}`);
         return `<li><strong>${esc(u.medicine_name)}</strong><span>${bits.join(" · ") || "Confirmed, no change"}</span><span class="when">${esc(ago(u.updated_at))}</span></li>`;
-      }).join("") : `<li class="hint">No changes yet.</li>`;
+      }).join("") : `<li class="hint">هنوز تغییری ثبت نشده.</li>`;
     } catch (e) { host.innerHTML = `<li class="hint">${esc(e.message)}</li>`; }
   }
 
@@ -196,7 +196,7 @@
 
   /* ---------- bulk import ---------- */
   $("#impTpl").onclick = () => {
-    const csv = "medicine,price,status,stock\nParacetamol 500mg,4.20,available,40\nIbuprofen 400mg,5.40,limited_stock,3\n";
+    const csv = "نام دارو,قیمت (تومان),وضعیت,موجودی\nقرص پاراستامول ۵۰۰ میلی‌گرم,45000,موجود,40\nقرص ایبوپروفن ۴۰۰ میلی‌گرم,54000,کم,3\n";
     const a = document.createElement("a");
     a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" })); a.download = "medfind-stock-template.csv"; a.click();
     URL.revokeObjectURL(a.href);

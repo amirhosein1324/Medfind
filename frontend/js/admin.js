@@ -103,14 +103,14 @@
     no_sitemap: "No sitemap found", no_product_data: "No price data on pages" };
   async function sources() {
     const list = await api.webSources();
-    panel.innerHTML = `<p class="hint" style="margin-bottom:var(--s-3)">The crawler runs automatically (see <code>scripts/crawl.py</code>) and only reads sites that allow it in robots.txt.</p>
+    panel.innerHTML = `<p class="hint" style="margin-bottom:var(--s-3)">خزنده به‌طور خودکار اجرا می‌شود (<code>scripts/crawl.py</code>) و فقط سایت‌هایی را می‌خواند که robots.txt اجازه دهد.</p>
       <div class="dt-wrap"><table class="dt"><thead><tr><th>Website</th><th>Status</th><th>Products</th><th>Last run</th><th></th></tr></thead><tbody>` +
       list.map((s) => `<tr><td class="name">${esc(s.domain)}<div class="sub">${esc(s.detail || "")}</div></td>
         <td><span class="pill" data-t="${s.status === "ok" ? "ok" : s.status === "pending" ? "" : "warn"}">${esc(SRC_NOTE[s.status] || s.status)}</span></td>
         <td class="num">${s.products_total}</td><td>${s.last_run ? esc(ago(s.last_run)) : "–"}</td>
         <td><div class="acts"><button class="btn btn--secondary btn--sm" data-crawl="${esc(s.domain)}">${icon("refresh")}Crawl now</button></div></td></tr>`).join("") + `</tbody></table></div>
       <h2 class="section-title" style="margin-top:var(--s-6)">Import a price list</h2>
-      <form class="panel" id="plForm"><p class="hint" style="margin-bottom:var(--s-3)">Upload a published price list (CSV or Excel, English or Persian headers such as <b>نام دارو</b> and <b>قیمت</b>), for example an official consumer price list.</p>
+      <form class="panel" id="plForm"><p class="hint" style="margin-bottom:var(--s-3)">یک فهرست قیمت منتشرشده (CSV یا Excel با ستون‌هایی مانند <b>نام دارو</b> و <b>قیمت</b>) بارگذاری کنید؛ مثلاً فهرست رسمی قیمت مصرف‌کننده.</p>
         <div class="field-row field-row--3">
           <div class="field"><label class="label" for="plFile">File</label><input class="input" id="plFile" type="file" accept=".csv,.xlsx,.txt" required></div>
           <div class="field"><label class="label" for="plSrc">Source name</label><input class="input" id="plSrc" placeholder="fda.gov.ir" required></div>

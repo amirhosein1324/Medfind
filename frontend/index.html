@@ -1,14 +1,12 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="fa" dir="rtl" data-theme="light">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark">
-<meta name="description" content="Find which pharmacies have your medicine, compare price and distance, and see how recently each listing was confirmed.">
-<title>MedFind: find your medicine at a pharmacy near you</title>
+<meta name="description" content="ببینید کدام داروخانه داروی شما را دارد؛ قیمت و فاصله را مقایسه کنید و زمان آخرین تأیید هر مورد را ببینید.">
+<title>مدفایند: داروی خود را در داروخانه‌های اطراف پیدا کنید</title>
 <script>document.documentElement.dataset.theme=localStorage.getItem('medfind_theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light')</script>
-<link rel="preload" href="fonts/bricolage-grotesque-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="preload" href="fonts/figtree-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
 <script src="js/i18n.js"></script>
 <link rel="stylesheet" href="css/medfind.css">
 <link rel="stylesheet" href="css/rtl.css">
@@ -48,13 +46,13 @@
       <aside class="hero__stage" aria-hidden="true">
         <div class="stage__label">Example result</div>
         <div class="sample sample--back">
-          <div class="sample__row"><strong>Riverside Pharmacy</strong><span class="sample__price">$3.80</span></div>
-          <div class="sample__row sample__row--sub"><span>Paracetamol 500mg Tablet</span><span class="status" data-s="limited_stock" id="sampleStatusB"></span></div>
+          <div class="sample__row"><strong>داروخانه نمونه شماره ۲</strong><span class="sample__price">۴۸٬۰۰۰ تومان</span></div>
+          <div class="sample__row sample__row--sub"><span>قرص پاراستامول ۵۰۰ میلی‌گرم</span><span class="status" data-s="limited_stock" id="sampleStatusB"></span></div>
         </div>
         <div class="sample sample--front">
           <div class="sample__flags"><span class="flag" id="sampleFlag"></span></div>
-          <div class="sample__row"><strong>Green Cross Pharmacy</strong><span class="sample__price">$4.20</span></div>
-          <div class="sample__row sample__row--sub"><span>Paracetamol 500mg Tablet</span><span class="status" data-s="available" id="sampleStatusA"></span></div>
+          <div class="sample__row"><strong>داروخانه نمونه شماره ۱</strong><span class="sample__price">۴۵٬۰۰۰ تومان</span></div>
+          <div class="sample__row sample__row--sub"><span>قرص پاراستامول ۵۰۰ میلی‌گرم</span><span class="status" data-s="available" id="sampleStatusA"></span></div>
           <div class="sample__meta"><span id="samplePin"></span> 1.1 km away</div>
           <div class="sample__fresh">
             <span class="fresh" data-tier="fresh"><span class="fresh__bars sample__bars"><i></i><i></i><i></i><i></i><i></i></span><span class="fresh__text">Updated 5 min ago</span></span>
@@ -66,11 +64,6 @@
 
   <!-- ============ RESULTS ============ -->
   <section class="results wrap" id="results" hidden aria-labelledby="resultsTitle">
-    <div class="banner" id="demoBanner" role="status" hidden>
-      <span id="demoBannerIcon" aria-hidden="true"></span>
-      <span>Can't reach the MedFind API, so you're seeing sample data. <button class="link-btn" type="button" data-open-connection>Change API address</button></span>
-    </div>
-
     <div class="results__layout">
       <aside class="filters-col" aria-label="Filters">
         <div class="filters-col__inner" id="filtersDesktop"></div>
@@ -196,7 +189,6 @@
 
 <script src="js/config.js"></script>
 <script src="js/core.js"></script>
-<script src="js/demo.js"></script>
 <script src="js/search.js"></script>
 </body>
 </html>

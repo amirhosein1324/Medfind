@@ -1,16 +1,13 @@
-/* MedFind language layer: English <-> Persian (RTL).
- * Strings in the UI are written in English. In Persian mode every known string
+/* MedFind language layer: the interface is Persian only (RTL).
+ * Source strings are written in English keys; every known string
  * (exact match or pattern) is translated in place, including text the scripts
  * add later, and digits become Persian digits. Medicine and shop names are data,
  * not UI, so they are never touched. */
 (function () {
   "use strict";
-  const KEY = "medfind_lang";
-  let lang = "en";
-  try { lang = localStorage.getItem(KEY) || (/^fa/i.test(navigator.language) ? "fa" : "en"); } catch (_) {}
-  if (lang !== "fa") lang = "en";
+  const lang = "fa";
   const root = document.documentElement;
-  root.lang = lang; root.dir = lang === "fa" ? "rtl" : "ltr";
+  root.lang = "fa"; root.dir = "rtl";
 
   const D = {
     // nav + common
@@ -24,7 +21,7 @@
     // hero
     "Which pharmacy has your medicine right now?": "داروی شما همین الان در کدام داروخانه موجود است؟",
     "Search once. Compare availability, price and distance across nearby pharmacies, with the time each listing was last confirmed.": "یک بار جستجو کنید. موجودی، قیمت و فاصله را بین داروخانه‌های اطراف مقایسه کنید، همراه با زمان آخرین تأیید هر مورد.",
-    "Search": "جستجو", "Medicine name": "نام دارو", "Medicine, brand or generic name": "نام دارو، برند یا ژنریک",
+    "Search": "جستجو", "MedFind": "مدفایند", "Medicine name": "نام دارو", "Medicine, brand or generic name": "نام دارو، برند یا ژنریک",
     "Medicine suggestions": "پیشنهاد دارو", "Quick searches": "جستجوهای سریع", "Try:": "امتحان کنید:",
     "Use my location": "استفاده از موقعیت من", "Location on": "موقعیت روشن است", "Locating…": "در حال یافتن موقعیت…",
     "Location stays in your browser and is only used to measure distance.": "موقعیت شما فقط در مرورگر می‌ماند و تنها برای محاسبه فاصله استفاده می‌شود.",
@@ -99,6 +96,128 @@
     "Email": "ایمیل", "Password": "گذرواژه", "I am a…": "من…", "Customer": "مشتری", "Find medicine nearby": "دارو را در نزدیکی پیدا می‌کنم",
     "Pharmacy owner": "صاحب داروخانه", "List my stock": "موجودی‌ام را ثبت می‌کنم", "Full name": "نام کامل",
     "(8+ characters)": "(حداقل ۸ نویسه)", "(optional)": "(اختیاری)", "Account": "حساب کاربری",
+    "Add a medicine": "افزودن دارو",
+    "Pick a medicine from the list.": "یک دارو را از فهرست انتخاب کنید.",
+    "Not confirmed": "تأیید نشده",
+    "Stock": "موجودی",
+    "Add listing": "افزودن مورد",
+    "Import stock from a file": "وارد کردن موجودی از فایل",
+    "Download a template": "دانلود قالب",
+    "File (.csv or .xlsx, up to 2 MB)": "فایل (csv یا xlsx، حداکثر ۲ مگابایت)",
+    "Import": "وارد کردن",
+    "Start typing a name…": "نام را شروع به نوشتن کنید…",
+    "Medicines": "داروها",
+    "Approve pharmacies and manage the medicine catalogue.": "داروخانه\u200cها را تأیید کنید و فهرست داروها را مدیریت کنید.",
+    "Pharmacies": "داروخانه\u200cها",
+    "Categories": "دسته\u200cبندی\u200cها",
+    "Data sources": "منابع داده",
+    "Users": "کاربران",
+    "Sections": "بخش\u200cها",
+    "Couldn't load your dashboard": "بارگذاری داشبورد ممکن نشد",
+    "Retry": "تلاش دوباره",
+    "Set up your pharmacy": "داروخانهٔ خود را راه\u200cاندازی کنید",
+    "An admin reviews new pharmacies before they show up in search.": "مدیر، داروخانه\u200cهای جدید را پیش از نمایش در جستجو بررسی می\u200cکند.",
+    "Pharmacy name": "نام داروخانه",
+    "Latitude": "عرض جغرافیایی",
+    "Longitude": "طول جغرافیایی",
+    "Use my current location": "استفاده از موقعیت فعلی من",
+    "Needed so customers see distance.": "برای نمایش فاصله به مشتریان لازم است.",
+    "Submit for approval": "ارسال برای تأیید",
+    "Couldn't get your location.": "موقعیت شما دریافت نشد.",
+    "Location isn't available in this browser.": "موقعیت\u200cیابی در این مرورگر در دسترس نیست.",
+    "Name and address are required.": "نام و نشانی الزامی است.",
+    "Submitted. We'll review it shortly.": "ارسال شد. به\u200cزودی بررسی می\u200cکنیم.",
+    "Filter by medicine name": "فیلتر بر اساس نام دارو",
+    "Confirm nothing has changed": "تأیید می\u200cکنم تغییری نکرده",
+    "Confirmed, no change": "تأیید شد، بدون تغییر",
+    "Row": "ردیف",
+    "Import CSV": "وارد کردن CSV",
+    "New medicine": "داروی جدید",
+    "Name": "نام",
+    "Generic": "ژنریک",
+    "Brand": "برند",
+    "Form": "شکل دارویی",
+    "Aliases": "نام\u200cهای دیگر",
+    "No medicines found": "دارویی پیدا نشد",
+    "Saved": "ذخیره شد",
+    "Prescription required": "نیازمند نسخه",
+    "Name is required.": "نام الزامی است.",
+    "Alternative names customers might search for.": "نام\u200cهای دیگری که مشتریان ممکن است جستجو کنند.",
+    "None yet.": "هنوز چیزی نیست.",
+    "New category": "دستهٔ جدید",
+    "Pharmacy approved": "داروخانه تأیید شد",
+    "Remove this pharmacy from public search?": "این داروخانه از جستجوی عمومی حذف شود؟",
+    "Approval revoked": "تأیید لغو شد",
+    "Crawl started. Refresh in a minute.": "خزش شروع شد. یک دقیقه دیگر صفحه را تازه کنید.",
+    "Can't reach the MedFind API": "اتصال به سرور مدفایند برقرار نشد",
+    "Your browser can't share a location.": "مرورگر شما موقعیت را به اشتراک نمی\u200cگذارد.",
+    "Couldn't get your location. Check the browser permission.": "موقعیت دریافت نشد. دسترسی مرورگر را بررسی کنید.",
+    "Searching…": "در حال جستجو…",
+    "Description": "توضیحات",
+    "Nothing waiting for review": "موردی در انتظار بررسی نیست",
+    "No categories yet": "هنوز دسته\u200cای نیست",
+    "Approved": "تأییدشده",
+    "Pending": "در انتظار",
+    "Working": "فعال",
+    "Not crawled yet": "هنوز خزش نشده",
+    "Crawl now": "خزش اکنون",
+    "Last run": "آخرین اجرا",
+    "Products": "محصولات",
+    "Import a price list": "وارد کردن فهرست قیمت",
+    "Source name": "نام منبع",
+    "File": "فایل",
+    "Prices are in": "قیمت\u200cها به",
+    "Rial": "ریال",
+    "Auto (Rial unless header says Toman)": "خودکار (ریال، مگر آنکه عنوان ستون تومان باشد)",
+    "The crawler runs automatically (see scripts/crawl.py) and only reads sites that allow it in robots.txt.": "خزنده به\u200cطور خودکار اجرا می\u200cشود (scripts/crawl.py) و فقط سایت\u200cهایی را می\u200cخواند که robots.txt اجازه دهد.",
+    "Role": "نقش",
+    "Active": "فعال",
+    "admin": "مدیر",
+    "owner": "صاحب داروخانه",
+    "pharmacy owner": "صاحب داروخانه",
+    "customer": "مشتری",
+    "Approve": "تأیید",
+    "Revoke": "لغو تأیید",
+    "Reject": "رد",
+    "Edit": "ویرایش",
+    "Delete": "حذف",
+    "Add": "افزودن",
+    "Update": "به\u200cروزرسانی",
+    "Confirm": "تأیید",
+    "Confirm all": "تأیید همه",
+    "Save changes": "ذخیره تغییرات",
+    "Add medicine": "افزودن دارو",
+    "Medicine #": "دارو #",
+    "Selected:": "انتخاب\u200cشده:",
+    "Blocked by robots.txt": "مسدود با robots.txt",
+    "Unreachable": "در دسترس نیست",
+    "No sitemap": "بدون sitemap",
+    "No product data": "بدون داده محصول",
+    "Recent changes": "تغییرات اخیر",
+    "Your listings": "موردهای شما",
+    "No listings yet": "هنوز موردی ثبت نشده",
+    "Add your first medicine to appear in search.": "اولین داروی خود را اضافه کنید تا در جستجو نمایش داده شوید.",
+    "In stock": "موجود",
+    "Low stock": "موجودی کم",
+    "Out": "ناموجود",
+    "Limited": "محدود",
+    "Unconfirmed": "تأیید نشده",
+    "Pending approval": "در انتظار تأیید",
+    "Your pharmacy is waiting for admin approval. It won't appear in search until then.": "داروخانه شما منتظر تأیید مدیر است و تا آن زمان در جستجو نمایش داده نمی\u200cشود.",
+    "Status:": "وضعیت:",
+    "Latest": "آخرین",
+    "Date": "تاریخ",
+    "Change": "تغییر",
+    "Created": "ایجاد شد",
+    "Description (optional)": "توضیحات (اختیاری)",
+    "Medicine, brand or generic name": "نام دارو، برند یا ژنریک",
+    "Close filters": "بستن فیلترها",
+    "1.1 km away": "۱٫۱ کیلومتر فاصله",
+    "Updated 5 min ago": "۵ دقیقه پیش به\u200cروزرسانی شد",
+    "If you opened this page from the API itself (/app/), this is already correct.": "اگر این صفحه را از خود API باز کرده\u200cاید (/app/)، این مقدار از قبل درست است.",
+    "Medicines found online": "داروهای یافت\u200cشده در اینترنت",
+    "Within": "تا",
+    "Request failed": "درخواست ناموفق بود",
   };
 
   const AGO = [
@@ -157,7 +276,10 @@
     }
   }
   function start() {
-    document.title = tr(document.title);
+    const fixTitle = () => { const t = document.title.replace(/\s*[·|:-]\s*MedFind$/, " · مدفایند"); const v = tr(t); if (v !== document.title) document.title = v; };
+    fixTitle();
+    const tEl = document.querySelector("title");
+    if (tEl) new MutationObserver(fixTitle).observe(tEl, { childList: true });
     node(document.body);
     new MutationObserver((ms) => {
       for (const m of ms) {
@@ -170,11 +292,7 @@
 
   window.I18N = {
     lang,
-    t: (en, vars) => { let s = en; if (vars) for (const k in vars) s = s.replace("{" + k + "}", vars[k]); return lang === "fa" ? digits(tr(s)) : s; },
-    set(l) { try { localStorage.setItem(KEY, l); } catch (_) {} location.reload(); },
-    toggle() { this.set(lang === "fa" ? "en" : "fa"); },
+    t: (en, vars) => { let s = en; if (vars) for (const k in vars) s = s.replace("{" + k + "}", vars[k]); return digits(tr(s)); },
   };
-  if (lang === "fa") {
-    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start); else start();
-  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start); else start();
 })();
