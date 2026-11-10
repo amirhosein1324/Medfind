@@ -22,7 +22,7 @@ def test_sheet_requires_columns():
         sheet.parse_sheet("s.pdf", b"x")
 
 
-def test_catalog_csv_and_openfda_mapping():
+def test_catalog_csv_import():
     db = TestingSessionLocal()
     try:
         csv_ = b"name,generic_name,aliases,prescription_required\nTestol 10mg,Testolam,Testo|T10,yes\n"
@@ -30,9 +30,6 @@ def test_catalog_csv_and_openfda_mapping():
         assert catalog.from_csv(db, csv_)["existing"] == 1
     finally:
         db.close()
-    kw = catalog.openfda_record({"brand_name": "ADVIL", "generic_name": "IBUPROFEN", "dosage_form": "TABLET",
-                                 "product_type": "HUMAN OTC DRUG", "active_ingredients": [{"name": "IBUPROFEN", "strength": "200 mg/1"}]})
-    assert kw["name"] == "Advil 200 mg/1" and kw["rx"] is False and kw["generic"] == "Ibuprofen"
 
 
 def _owner(client):

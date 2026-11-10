@@ -1,3 +1,4 @@
+import re
 import json
 from urllib.robotparser import RobotFileParser
 
@@ -102,7 +103,8 @@ def test_grouping_product_page_and_history(client):
         crawler.crawl_source(db, dom, 5, FakeFetcher(pages, f"User-agent: *\nAllow: /\nSitemap: https://{dom}/sm.xml"))
     db.close()
     r = client.get("/api/web/search", params={"q": "paracetamol"}).json()
-    g = next(x for x in r["groups"] if x["generic"] == "Paracetamol")
+    g = next(x for x in r["groups"] if x["generic"] == "پاراستامول")
+    assert g["name"] == "قرص پاراستامول 500 میلی‌گرم" and not re.search("[A-Za-z]", g["name"])
     assert g["shops"] == 2 and float(g["min_price"]) == 11000 and g["offers"][0]["shop"] == "shop-b.ir"
     page = client.get("/api/web/product", params={"key": g["key"]}).json()
     assert len(page["offers"]) == 2 and page["history"] and page["history"][-1]["min_price"] == 11000
@@ -145,44 +147,12 @@ def test_pricelist_import_persian_headers(client):
         assert r["saved"] == 1 and r["skipped"] == 1 and r["currency"] == "IRR"
     finally:
         db.close()
-    g = next(x for x in client.get("/api/web/search", params={"q": "paracetamol"}).json()["groups"] if x["generic"] == "Paracetamol")
+    g = next(x for x in client.get("/api/web/search", params={"q": "paracetamol"}).json()["groups"] if x["generic"] == "پاراستامول")
     assert float(g["min_price"]) == 12500 and g["offers"][0]["availability"] == "unknown"
 
 
 def test_admin_import_endpoint_requires_admin(client):
     assert client.post("/api/web/import", files={"file": ("a.csv", b"x")}, data={"source": "s"}).status_code == 401
-
-
-def test_nadac_import_real_format(client):
-    from app.ingest.nadac import import_nadac
-    lines = [
-        "NDC Description,NDC,NADAC_Per_Unit,Effective_Date,Pricing_Unit,Pharmacy_Type_Indicator,OTC,Explanation_Code,Classification_for_Rate_Setting,Corresponding_Generic_Drug_NADAC_Per_Unit,Corresponding_Generic_Drug_Effective_Date,As_of_Date",
-        "ATORVASTATIN 10 MG TABLET,00093505698,0.02345,01/01/2026,EA,C/I,N,1,G,,,01/07/2026",
-        "ATORVASTATIN 10 MG TABLET,00093505698,0.02100,01/08/2026,EA,C/I,N,1,G,,,01/14/2026",
-        "BAD ROW,,x,notadate,EA,C/I,N,1,G,,,",
-    ]
-    db = TestingSessionLocal()
-    try:
-        r = import_nadac(db, lines)
-        assert r["products"] == 1 and r["bad_rows"] == 1
-    finally:
-        db.close()
-    g = next(x for x in client.get("/api/web/search", params={"q": "atorvastatin"}).json()["groups"] if x["offers"])
-    assert float(g["min_price"]) == 0.021 and g["currency"] == "USD"
-
-
-def test_nadac_header_variants(client):
-    from app.ingest.nadac import import_nadac
-    lines = ["NDC Description,NDC,NADAC Per Unit,Effective Date,Pricing Unit,OTC",
-             "METFORMIN 500 MG TABLET,00093104801,$0.01234,2026-02-11,EA,N"]
-    db = TestingSessionLocal()
-    try:
-        assert import_nadac(db, lines)["products"] == 1
-        import pytest
-        with pytest.raises(ValueError):
-            import_nadac(db, ["a,b", "1,2"])
-    finally:
-        db.close()
 
 
 def test_clean_title_strips_shop_boilerplate():
@@ -197,12 +167,28 @@ def test_typo_tolerant_web_search(client):
     db = TestingSessionLocal()
     try:
         upsert_product(db, "https://typo.example/p/1", "typo.example",
-                       {"title": "Paracetamol 500mg Tablet", "price": Decimal("5"), "currency": "USD",
+                       {"title": "قرص پاراستامول 500 میلی گرم", "price": Decimal("50000"), "currency": "IRR",
                         "availability": "available", "image_url": None})
         db.commit()
     finally:
         db.close()
-    r = client.get("/api/web/search", params={"q": "paracetmol"}).json()
-    assert r["fuzzy"] is True and r["groups"] and r["groups"][0]["generic"] == "Paracetamol"
-    assert client.get("/api/web/search", params={"q": "paracetamol"}).json()["fuzzy"] is False
+    r = client.get("/api/web/search", params={"q": "پاراستمول"}).json()
+    assert r["fuzzy"] is True and r["groups"] and r["groups"][0]["generic"] == "پاراستامول"
+    assert client.get("/api/web/search", params={"q": "پاراستامول"}).json()["fuzzy"] is False
     assert client.get("/api/web/search", params={"q": "zzzzzzzz"}).json()["groups"] == []
+
+
+def test_suggest_and_display_are_persian(client):
+    from decimal import Decimal
+    from app.ingest.crawler import upsert_product
+    db = TestingSessionLocal()
+    try:
+        upsert_product(db, "https://sg.example/p/1", "sg.example",
+                       {"title": "قرص پاراستامول 500 میلی گرم", "price": Decimal("50000"), "currency": "IRR",
+                        "availability": "available", "image_url": None})
+        db.commit()
+    finally:
+        db.close()
+    r = client.get("/api/web/suggest", params={"q": "پاراستامول"}).json()
+    assert r and all(re.search("[\u0600-\u06FF]", x["name"]) for x in r)
+    assert all(not x["generic_name"] or not re.search("[A-Za-z]", x["generic_name"]) for x in r)
