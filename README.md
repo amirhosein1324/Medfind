@@ -301,7 +301,7 @@ Search shows one card per medicine ("from X Toman, N shops, M in stock"), groupe
     docker compose exec crawler python -m scripts.check_sites banidaroo.com
 Compares robots.txt and home page as MedFindBot vs a normal browser: network trouble (DNS/TLS/timeout) looks the same for both; a bot block (403, connection reset) only hits the bot.
 
-## Search design
+## Search design core
 
 **Matching** (`app/ingest/service.py`, `app/ingest/fuzzy.py`)
 
