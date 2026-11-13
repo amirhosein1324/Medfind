@@ -45,12 +45,30 @@ def _slug(t: str) -> str:
     return re.sub(r"[^\w]+", "-", normalize(t).lower(), flags=re.U).strip("-")[:90]
 
 
+_NOISE = {"قیمت", "خرید", "عدد", "عددی", "بسته", "بسته‌ای", "مدل", "و", "با", "برای", "از", "در", "به", "اصل", "اورجینال",
+          "جدید", "ارسال", "رایگان", "محصول", "برند", "نوع", "تایی", "تای", "حاوی", "مخصوص", "the", "of", "and", "for"}
+_UNITS = [("میلی‌?\\s?گرم", "mg"), ("میکروگرم", "mcg"), ("میلی‌?\\s?لیتر", "ml"), ("گرم", "g"), ("کیلوگرم", "kg"), ("لیتر", "l")]
+
+
+def title_key(title: str) -> str:
+    """Fallback key for products whose ingredient is unknown: the same words in any order, digits and units unified,
+    sales wording dropped. 'امگا ۳ ... ۶۰ عددی کپسول' and 'کپسول امگا 3 ... 60 عدد' get the same key."""
+    t = normalize(title).lower()
+    for pat, unit in _UNITS:
+        t = re.sub(r"(\d)\s*" + pat, r"\1" + unit, t)
+    toks = {w for w in re.split(r"[^\w]+", t, flags=re.U) if w and w not in _NOISE and not (len(w) == 1 and not w.isdigit())}
+    if not toks:
+        return _slug(title)
+    first = max(toks, key=lambda w: (len(w), w))      # lookup word first (see get_group), the rest sorted
+    return "-".join([first] + sorted(toks - {first}))[:120]
+
+
 def group_key(r: WebProduct) -> str:
     """Same medicine, strength and form on different shops -> same key."""
     a = analyze_title(r.title)
     if a["generic"]:
         return _slug(" ".join(x for x in (a["generic"], a["strength"], a["form"]) if x))
-    return _slug(r.title_en or r.title)
+    return title_key(r.title)
 
 
 def _offer(r: WebProduct) -> dict:

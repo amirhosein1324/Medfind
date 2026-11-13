@@ -192,3 +192,12 @@ def test_suggest_and_display_are_persian(client):
     r = client.get("/api/web/suggest", params={"q": "پاراستامول"}).json()
     assert r and all(re.search("[\u0600-\u06FF]", x["name"]) for x in r)
     assert all(not x["generic_name"] or not re.search("[A-Za-z]", x["generic_name"]) for x in r)
+
+
+def test_unknown_products_merge_when_titles_differ_only_in_wording():
+    from app.ingest.service import title_key
+    a = title_key("قیمت و خرید کپسول ایمیونو پلاس ۶۰ عددی")
+    b = title_key("ایمیونو پلاس کپسول 60 عدد")
+    assert a == b
+    assert a != title_key("ایمیونو پلاس کپسول 30 عدد")
+    assert title_key("شربت آلفا 100 میلی گرم") == title_key("شربت آلفا ۱۰۰ میلی‌گرم")

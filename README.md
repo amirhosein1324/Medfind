@@ -274,7 +274,7 @@ The search page shows them as one card per medicine. All names shown to users ar
     docker compose exec api python -m scripts.crawl --max-pages 3000 --workers 6          # everything, now, 6 shops in parallel
     docker compose exec api python -m scripts.crawl --domain darukade.com --max-pages 50  # one site
 
-* **Sites**: `CRAWL_SOURCES=a.ir,b.ir` in `.env`. `app/ingest/sources.py` lists 7 sites confirmed to work and 11 more candidates that are not verified yet.
+* **Sites**: `CRAWL_SOURCES=a.ir,b.ir` in `.env`. `app/ingest/sources.py` lists 7 sites confirmed to work and 19 more candidates that are not verified yet.
   Run `docker compose exec crawler python -m scripts.check_sites` to see which work from your server, then remove the ones that do not.
 * **Rules**: a site is crawled only if its robots.txt allows it, with a delay between requests, public addresses only.
 * **Pages** are read through schema.org Product JSON-LD, Torob-style `product_price` meta tags, or Open Graph price tags.
@@ -301,7 +301,7 @@ Search shows one card per medicine ("from X Toman, N shops, M in stock"), groupe
     docker compose exec crawler python -m scripts.check_sites banidaroo.com
 Compares robots.txt and home page as MedFindBot vs a normal browser: network trouble (DNS/TLS/timeout) looks the same for both; a bot block (403, connection reset) only hits the bot.
 
-## Search design core
+## Search design
 
 **Matching** (`app/ingest/service.py`, `app/ingest/fuzzy.py`)
 

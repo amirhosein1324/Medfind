@@ -11,6 +11,12 @@ import httpx
 
 USER_AGENT = "MedFindBot/1.0 (medicine price search; honours robots.txt)"
 MAX_BYTES = 3_000_000
+RETRIES = 3                       # transient network errors are common from Iran: try again before giving up
+TIMEOUT = httpx.Timeout(25.0, connect=20.0)
+
+
+def _retry_sleep(attempt: int) -> None:
+    time.sleep(2 * (attempt + 1))
 
 
 def is_public_url(url: str) -> bool:
@@ -34,18 +40,22 @@ class Fetcher:
         """None = robots.txt unreachable (treated as 'do not crawl')."""
         if base not in self._robots:
             rp = RobotFileParser()
-            try:
-                r = httpx.get(base + "/robots.txt", timeout=8, headers={"User-Agent": USER_AGENT}, follow_redirects=True)
-                if r.status_code >= 500:
+            for attempt in range(RETRIES):
+                try:
+                    r = httpx.get(base + "/robots.txt", timeout=TIMEOUT, headers={"User-Agent": USER_AGENT}, follow_redirects=True)
+                    if r.status_code >= 500 or r.status_code == 429:
+                        rp = None
+                        self.errors[base] = f"robots.txt returned HTTP {r.status_code}"
+                    elif r.status_code >= 400:
+                        rp.parse([])  # no robots.txt: everything allowed
+                    else:
+                        rp.parse(r.text.splitlines())
+                    break
+                except httpx.HTTPError as e:
                     rp = None
-                    self.errors[base] = f"robots.txt returned HTTP {r.status_code}"
-                elif r.status_code >= 400:
-                    rp.parse([])  # no robots.txt: everything allowed
-                else:
-                    rp.parse(r.text.splitlines())
-            except httpx.HTTPError as e:
-                rp = None
-                self.errors[base] = f"{type(e).__name__}: {str(e)[:160]}"
+                    self.errors[base] = f"{type(e).__name__}: {str(e)[:160]}"
+                    if attempt < RETRIES - 1:
+                        _retry_sleep(attempt)
             self._robots[base] = rp
         return self._robots[base]
 
@@ -69,18 +79,39 @@ class Fetcher:
         if wait > 0:
             time.sleep(wait)
         self._last[u.netloc] = time.time()
-        try:
-            with httpx.stream("GET", url, timeout=12, follow_redirects=False,
-                              headers={"User-Agent": USER_AGENT, "Accept": accept, "Accept-Language": "fa,en;q=0.8", "Accept-Encoding": "gzip"}) as r:
-                if r.status_code != 200:
-                    return None
-                buf = b""
-                for chunk in r.iter_raw():
-                    buf += chunk
-                    if len(buf) > MAX_BYTES:
+        buf, enc = None, ""
+        cur = url
+        for attempt in range(RETRIES):
+            try:
+                for _hop in range(4):   # follow a few redirects ourselves (http->https, www), staying on the same site
+                    with httpx.stream("GET", cur, timeout=TIMEOUT, follow_redirects=False,
+                                      headers={"User-Agent": USER_AGENT, "Accept": accept, "Accept-Language": "fa,en;q=0.8", "Accept-Encoding": "gzip"}) as r:
+                        if r.status_code in (301, 302, 303, 307, 308) and r.headers.get("location"):
+                            nxt = str(httpx.URL(cur).join(r.headers["location"]))
+                            same = urlparse(nxt).netloc.removeprefix("www.") == u.netloc.removeprefix("www.")
+                            if not same or not is_public_url(nxt) or not self.allowed(nxt):
+                                return None
+                            cur = nxt
+                            continue
+                        if r.status_code == 429 or r.status_code >= 500:
+                            raise httpx.TransportError(f"HTTP {r.status_code}")
+                        if r.status_code != 200:
+                            return None
+                        buf = b""
+                        for chunk in r.iter_raw():
+                            buf += chunk
+                            if len(buf) > MAX_BYTES:
+                                break
+                        enc = r.headers.get("content-encoding", "")
                         break
-                enc = r.headers.get("content-encoding", "")
-        except httpx.HTTPError:
+                if buf is not None:
+                    break
+                return None
+            except httpx.HTTPError:
+                self.delay = min(self.delay * 1.5, 10.0)   # the site (or the network) is struggling: slow down
+                if attempt < RETRIES - 1:
+                    _retry_sleep(attempt)
+        if buf is None:
             return None
         try:
             if enc == "gzip" or buf[:2] == b"\x1f\x8b":

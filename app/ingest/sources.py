@@ -17,7 +17,6 @@ DEFAULT_SOURCES = [
     "mosbatesabz.com",
     "daroohome.com",
     "daroohelp.com",
-    "darubiar.com",
     "daroodrug.com",
     "zeevash.com",
     "mcdarou.com",
@@ -25,6 +24,15 @@ DEFAULT_SOURCES = [
     "ezdaroo.com",
     "snapp.doctor",
     "pharmacy.digikala.com",
+    # found by search on 2026-11-13, not verified
+    "zardaroo.com",
+    "darukar.com",
+    "darokhanechi.com",
+    "multidaru.com",
+    "pharmado.ir",
+    "mokamelshop.com",
+    "darutamin.com",
+    "darmankade.com",
 ]
 
 
