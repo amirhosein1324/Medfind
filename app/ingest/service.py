@@ -5,11 +5,27 @@ import re
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
+from ..config import settings
 from ..models import PricePoint, WebProduct
 from . import fuzzy
 from .persian import analyze_title, fa_form, fa_generic, fa_strength, normalize, search_terms
 
 _RANK = {"available": 0, "limited_stock": 1, "unknown": 2, "out_of_stock": 3}
+
+
+def visible(q):
+    """Only products that are probably still for sale: seen recently and not marked out of stock."""
+    if settings.web_max_age_days > 0:
+        q = q.filter(WebProduct.fetched_at >= datetime.utcnow() - timedelta(days=settings.web_max_age_days))
+    if settings.web_hide_unavailable:
+        q = q.filter(WebProduct.availability != "out_of_stock")
+    return q
+
+
+def _is_visible(r: WebProduct) -> bool:
+    if settings.web_hide_unavailable and r.availability == "out_of_stock":
+        return False
+    return not (settings.web_max_age_days > 0 and r.fetched_at < datetime.utcnow() - timedelta(days=settings.web_max_age_days))
 
 
 def norm_query(q: str) -> str:
@@ -23,14 +39,14 @@ def search_local_ex(db: Session, q: str, limit: int = 80) -> tuple[list[WebProdu
     for t in search_terms(q):
         like = f"%{t}%"
         conds += [WebProduct.title.ilike(like), WebProduct.title_en.ilike(like), WebProduct.generic_en.ilike(like)]
-    rows = db.query(WebProduct).filter(or_(*conds)).limit(400).all() if conds else []
+    rows = visible(db.query(WebProduct).filter(or_(*conds))).limit(400).all() if conds else []
     rows.sort(key=lambda r: (_RANK.get(r.availability, 9), r.price is None, r.price or 0))
     if len(rows) >= 3:
         return rows[:limit], False
     seen = {r.product_id for r in rows}
     extra = []
     for r in fuzzy.similar(db, WebProduct, ("title_en", "generic_en", "title"), norm_query(q)):
-        if r.product_id not in seen:
+        if r.product_id not in seen and _is_visible(r):
             extra.append(r)
             seen.add(r.product_id)
     return (rows + extra)[:limit], bool(extra)

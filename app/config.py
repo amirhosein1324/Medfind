@@ -15,6 +15,9 @@ class Settings(BaseSettings):
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 60
 
+    # Which crawled products are shown. Old or sold-out products are hidden (not deleted: see scripts/prune.py).
+    web_max_age_days: int = 14           # hide products not re-confirmed by the crawler for this many days (0 = never hide)
+    web_hide_unavailable: bool = True    # hide products the shop marks as out of stock
     log_searches: bool = False     # privacy by design: search text can reveal health conditions
 
     # Site crawler (scripts/crawl.py): polite, sitemap-driven, robots.txt aware

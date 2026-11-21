@@ -61,7 +61,8 @@ def test_crawl_source_saves_and_converts():
         p = rows["Paracetamol"]
         assert p.title_en == "Paracetamol 500mg Tablet" and float(p.price) == 12500 and p.currency == "IRT"
         assert service.search_local(db, "پاراستامول")  # Persian finds it too
-        assert service.search_local(db, "ibuprofen")[0].availability == "out_of_stock"
+        assert db.query(service.WebProduct).filter_by(generic_en="Ibuprofen").one().availability == "out_of_stock"
+        assert service.search_local(db, "ibuprofen") == []  # sold out: hidden from search
         crawler.crawl_source(db, "shop.ir", 10, FakeFetcher(pages))  # re-run updates, no duplicates
         assert len(service.search_local(db, "paracetamol")) == 1
     finally:
@@ -201,3 +202,24 @@ def test_unknown_products_merge_when_titles_differ_only_in_wording():
     assert a == b
     assert a != title_key("ایمیونو پلاس کپسول 30 عدد")
     assert title_key("شربت آلفا 100 میلی گرم") == title_key("شربت آلفا ۱۰۰ میلی‌گرم")
+
+
+def test_old_and_sold_out_products_are_hidden(client):
+    from datetime import datetime, timedelta
+    from decimal import Decimal
+    from app.ingest.crawler import upsert_product
+    from app.models import WebProduct
+    db = TestingSessionLocal()
+    try:
+        for i, av in enumerate(("available", "out_of_stock", "available")):
+            upsert_product(db, f"https://hide.example/p/{i}", "hide.example",
+                           {"title": f"قرص زینک {i + 1}0 میلی گرم", "price": Decimal("1000"), "currency": "IRR",
+                            "availability": av, "image_url": None})
+        db.commit()
+        db.query(WebProduct).filter(WebProduct.url == "https://hide.example/p/2").update(
+            {"fetched_at": datetime.utcnow() - timedelta(days=60)})
+        db.commit()
+    finally:
+        db.close()
+    items = [o for g in client.get("/api/web/search", params={"q": "زینک"}).json()["groups"] for o in g["offers"]]
+    assert [o["url"] for o in items] == ["https://hide.example/p/0"]
