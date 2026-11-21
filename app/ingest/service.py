@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from ..config import settings
 from ..models import PricePoint, WebProduct
-from . import fuzzy
+from ... import fuzzy
 from .persian import analyze_title, fa_form, fa_generic, fa_strength, normalize, search_terms
 
 _RANK = {"available": 0, "limited_stock": 1, "unknown": 2, "out_of_stock": 3}
